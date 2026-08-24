@@ -4,6 +4,39 @@ An **unofficial** Model Context Protocol (MCP) server that provides access to th
 
 > **Disclaimer:** This is a community project. It is **not affiliated with, endorsed by, or supported by Fastmail**. "Fastmail" is a trademark of Fastmail Pty Ltd; it is used here only to describe compatibility with their public JMAP/CalDAV/WebDAV APIs. Use at your own risk under the terms of the project license.
 
+## About this fork
+
+This is a private copy of [MadLlama25/fastmail-mcp](https://github.com/MadLlama25/fastmail-mcp). It is not a GitHub fork: it is an independent repo with upstream's history underneath, so it can stay private and still merge upstream cleanly. Everything below this section is upstream's own documentation.
+
+Nothing in the server behaviour has changed yet. The fork adds project scaffolding only:
+
+- `scripts/check-upstream.mjs` and `.vscode/tasks.json` for the upstream check below
+- `CLAUDE.md`, the working rules for this repo
+- `.env.example`, documenting every environment variable without holding a value
+- a `check:upstream` npm script and a fork block at the bottom of `.gitignore`
+
+### Staying current with upstream
+
+Open `mcp-fastmail.code-workspace` (or the folder) in VS Code and allow automatic tasks once. On every open, the task `Upstream: check for updates` fetches upstream. When new commits exist it writes and opens `UPSTREAM-UPDATE.md`, which holds a ready prompt you can paste into an AI chat to do the merge. You can also run it by hand:
+
+```sh
+npm run check:upstream
+```
+
+Manual flow:
+
+```sh
+git fetch upstream
+git log --oneline main..upstream/main   # what is new
+git merge upstream/main                 # clean as long as our changes stay additive
+npm ci
+npm run build && npm test && npm run scan:secrets
+```
+
+Keep changes to upstream files additive, and list any upstream file you edit in `FORK_TOUCHED` in `scripts/check-upstream.mjs`. The next check then flags it as a conflict risk before you merge.
+
+---
+
 ## Features
 
 ### Core Email Operations

@@ -1,0 +1,12 @@
+{
+  "folders": [{ "path": "." }],
+  "settings": {
+    "task.allowAutomaticTasks": "on",
+    "typescript.tsdk": "node_modules/typescript/lib",
+    "files.eol": "\n",
+    "files.exclude": { "**/node_modules": true, "**/dist": true }
+  },
+  "extensions": {
+    "recommendations": ["dbaeumer.vscode-eslint"]
+  }
+}

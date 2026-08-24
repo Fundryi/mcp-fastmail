@@ -17,3 +17,18 @@ test-live*.js
 settings.local.json
 # Local secret/PII denylist (personal domains/addresses) — never commit.
 .secret-scan-local.txt
+
+# ---- Fork: local agent notes, never published ---------------------------
+CLAUDE.local.md
+*.local.md
+
+# ---- Fork: CLAUDE.md is ours and IS published (overrides the line above) -
+!CLAUDE.md
+
+# ---- Fork: upstream check -----------------------------------------------
+!.vscode/
+!.vscode/tasks.json
+UPSTREAM-UPDATE.md
+
+# ---- Fork: env template is safe to publish -------------------------------
+!.env.example
