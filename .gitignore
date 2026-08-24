@@ -32,3 +32,6 @@ UPSTREAM-UPDATE.md
 
 # ---- Fork: env template is safe to publish -------------------------------
 !.env.example
+
+# ---- Fork: local client configs, may hold a token ------------------------
+*.local.json
