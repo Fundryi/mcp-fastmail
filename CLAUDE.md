@@ -73,3 +73,15 @@ elevated shell. They pass on Linux and in CI. Everything else must be green.
 
 TypeScript, npm, Node 20+. `npm ci`, `npm run build`, `npm test`,
 `npm run scan:secrets`. Match upstream's conventions in files we add.
+
+## GitHub Actions in this fork
+
+Upstream ships release automation. In our repo it cut a `v1.13.4` tag and a
+release at the wrong commit, which then fought with upstream's real tag on
+every pull. **Build and Release DXT** and **Create Tag** are disabled on
+GitHub, as a switch rather than a file edit, so upstream merges stay clean.
+`test`, `Secret & PII scan` and `npx smoke` stay on.
+
+Tags come from `upstream` only. Never run `git fetch --prune-tags` against
+`origin`: origin holds no tags, so it deletes every upstream tag you have.
+Restore with `git fetch upstream --tags`.
