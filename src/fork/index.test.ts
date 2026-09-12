@@ -1,7 +1,10 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { ErrorCode, McpError } from '@modelcontextprotocol/sdk/types.js';
-import { coerceArgs, guardReadOnly, mergeForkTools, toMcpError } from './index.js';
+import { coerceArgs, guardReadOnly, mergeForkTools, runForkTool, toMcpError } from './index.js';
+import { JmapClient } from '../jmap-client.js';
+import { FastmailAuth } from '../auth.js';
+import { mock } from 'node:test';
 import { JmapError, RefusedError } from './core.js';
 
 describe('fork registry', () => {
@@ -48,5 +51,26 @@ describe('fork registry', () => {
     assert.deepEqual(coerceArgs(def, { dryRun: 'true', limit: '5', fields: '["a","b"]', parentId: 'null', name: 'x', n: '7' }),
       { dryRun: true, limit: '5', fields: ['a', 'b'], parentId: 'null', name: 'x', n: 7 });
     assert.deepEqual(coerceArgs(def, { fields: 'a, b' }), { fields: ['a', 'b'] });
+  });
+
+  it('returns a refusal as an isError tool result with the message in the body', async () => {
+    const client = new JmapClient(new FastmailAuth({ apiToken: 'fake-token' }));
+    mock.method(client, 'getSession', async () => ({ apiUrl: 'https://api.example.com/', accountId: 'a1', capabilities: { 'urn:ietf:params:jmap:mail': {} } }));
+    const r: any = await runForkTool('list_sieve_scripts', {}, client);
+    assert.equal(r.isError, true);
+    assert.match(r.content[0].text, /urn:ietf:params:jmap:sieve/);
+  });
+
+  it('uses the capability primary account for non-mail calls', async () => {
+    const client = new JmapClient(new FastmailAuth({ apiToken: 'fake-token' }));
+    mock.method(client, 'getSession', async () => ({
+      apiUrl: 'https://api.example.com/', accountId: 'mail-acct',
+      capabilities: { 'urn:ietf:params:jmap:mail': {}, 'urn:ietf:params:jmap:sieve': {}, 'urn:ietf:params:jmap:blob': {} },
+      primaryAccounts: { 'urn:ietf:params:jmap:mail': 'mail-acct', 'urn:ietf:params:jmap:sieve': 'sieve-acct' },
+    }));
+    let seen: any;
+    mock.method(client, 'makeRequest', async (req: any) => { seen = req; return { methodResponses: [['SieveScript/get', { list: [] }, 'c0']] }; });
+    await runForkTool('list_sieve_scripts', {}, client);
+    assert.equal(seen.methodCalls[0][1].accountId, 'sieve-acct');
   });
 });

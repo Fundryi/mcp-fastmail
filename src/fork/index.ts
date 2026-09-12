@@ -37,6 +37,12 @@ export async function runForkTool(name: string, args: unknown, client: JmapClien
   try {
     return text(await tool.run(coerceArgs(tool.def, (args ?? {}) as Record<string, any>), { client }));
   } catch (e) {
+    // A refusal or a server error is a tool result, not a protocol error. Some
+    // hosts drop the body of a protocol error and show only "Tool execution failed".
+    if (e instanceof RefusedError || e instanceof JmapError) {
+      const mapped = toMcpError(e);
+      return { ...text({ error: e.message, ...((mapped as any).data ?? {}) }), isError: true };
+    }
     throw toMcpError(e);
   }
 }
