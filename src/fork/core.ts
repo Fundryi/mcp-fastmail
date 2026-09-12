@@ -58,9 +58,12 @@ export type MethodCall = [method: string, args: Record<string, unknown>, tag?: s
  */
 export async function jmapBatch(client: JmapClient, caps: string[], calls: MethodCall[]): Promise<any[]> {
   const session = await client.getSession();
+  // RFC 8620 §2: each capability names its own primary account. Sieve, blob,
+  // quota or vacation may live on a different account than mail.
+  const accountId = using(...caps).slice(1).map((c) => session.primaryAccounts?.[c]).find(Boolean) ?? session.accountId;
   const methodCalls: [string, any, string][] = calls.map(([method, args, tag], i) => [
     method,
-    { accountId: session.accountId, ...args },
+    { accountId, ...args },
     tag ?? `c${i}`,
   ]);
   const response = await client.makeRequest({ using: using(...caps), methodCalls });
