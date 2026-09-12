@@ -18,7 +18,9 @@ Upstream's tools are untouched. The fork adds 49 tools of its own under `src/for
 - Operations: `unsubscribe` (RFC 8058 one-click, inspect by default), `report_spam`, `report_not_spam`, `import_email` (.eml), `empty_mailbox` (Trash or Junk only, permanent, `confirm` required), `get_changes`, `list_attachments`
 - `FASTMAIL_READ_ONLY=1` refuses every tool that writes. JMAP errors keep their `type` in the MCP error `data`.
 
-All of it is tested against a mocked transport only. Property names marked "unconfirmed" in a tool description (`identityRef`, the snooze shape, masked email fields) need one live call to confirm.
+`skills/fastmail-mcp/SKILL.md` is an agent skill for using these tools well: which tool fits which task, how to keep results small, and the dry run then confirm flow. Copy the folder into your agent's skills directory. The server also sends a short form of it as MCP instructions on connect.
+
+All of it is tested against a mocked transport and then against a live account. Property names marked "unconfirmed" in a tool description (`identityRef`, the snooze shape, masked email fields) need one live call to confirm.
 
 Scaffolding:
 
