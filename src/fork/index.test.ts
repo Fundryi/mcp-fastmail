@@ -1,7 +1,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { ErrorCode, McpError } from '@modelcontextprotocol/sdk/types.js';
-import { guardReadOnly, mergeForkTools, toMcpError } from './index.js';
+import { coerceArgs, guardReadOnly, mergeForkTools, toMcpError } from './index.js';
 import { JmapError, RefusedError } from './core.js';
 
 describe('fork registry', () => {
@@ -39,5 +39,14 @@ describe('fork registry', () => {
     assert.equal((r.data as any).needsConfirm, true);
     const g = toMcpError(new Error('boom'));
     assert.match(g.message, /^MCP error .*Tool execution failed: boom/);
+  });
+
+  it('coerces string arguments by schema type', () => {
+    const def = { name: 't', description: '', inputSchema: { type: 'object', properties: {
+      dryRun: { type: 'boolean' }, limit: { type: ['number', 'string'] }, fields: { type: 'array' }, parentId: { type: ['string', 'null'] }, name: { type: 'string' }, n: { type: 'number' },
+    } } };
+    assert.deepEqual(coerceArgs(def, { dryRun: 'true', limit: '5', fields: '["a","b"]', parentId: 'null', name: 'x', n: '7' }),
+      { dryRun: true, limit: '5', fields: ['a', 'b'], parentId: 'null', name: 'x', n: 7 });
+    assert.deepEqual(coerceArgs(def, { fields: 'a, b' }), { fields: ['a', 'b'] });
   });
 });

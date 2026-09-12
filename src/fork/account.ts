@@ -112,6 +112,23 @@ async function validate(client: JmapClient, content: string) {
 
 export const tools: ForkTool[] = [
   {
+    def: { name: 'get_session', description: 'Fetch the raw JMAP session and return username, apiUrl, primaryAccounts, the session capabilities and, per account, its name and accountCapabilities. Use it to see which JMAP extensions this API token can reach (sieve, blob, quota, maskedemail) before calling the tools that need them.',
+      inputSchema: { type: 'object', properties: {}, required: [] } },
+    write: false,
+    async run(_args, { client }) {
+      // The client keeps auth private; the session URL and headers are the only things needed here.
+      const auth = (client as any).auth;
+      const res = await fetch(auth.getSessionUrl(), { headers: auth.getAuthHeaders() });
+      if (!res.ok) throw new JmapError('sessionFailed', `${res.status} ${res.statusText}`);
+      const s: any = await res.json();
+      const accounts: Record<string, any> = {};
+      for (const [id, a] of Object.entries<any>(s.accounts ?? {})) {
+        accounts[id] = { name: a.name, isPersonal: a.isPersonal, isReadOnly: a.isReadOnly, accountCapabilities: a.accountCapabilities };
+      }
+      return { username: s.username, apiUrl: s.apiUrl, state: s.state, primaryAccounts: s.primaryAccounts, capabilities: s.capabilities, accounts };
+    },
+  },
+  {
     def: { name: 'list_sieve_scripts', description: 'List all Sieve scripts as id, name, isActive, and blobId.' + capabilityHelp,
       inputSchema: { type: 'object', properties: {}, required: [] } },
     write: false,

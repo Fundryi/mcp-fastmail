@@ -50,7 +50,7 @@ async function run(name: string, args: Record<string, any>, f: ReturnType<typeof
 describe('account tools', () => {
   it('registers every tool with the correct write flag', () => {
     assert.deepEqual(Object.fromEntries(tools.map(t => [t.def.name, t.write])), {
-      list_sieve_scripts: false, get_sieve_script: false, validate_sieve: false, set_sieve_script: true,
+      get_session: false, list_sieve_scripts: false, get_sieve_script: false, validate_sieve: false, set_sieve_script: true,
       create_identity: true, update_identity: true, get_vacation_response: false, set_vacation_response: true,
       get_quota: false, list_masked_emails: false, create_masked_email: true, update_masked_email: true,
       get_account_summary: false, list_aliases_with_usage: false,

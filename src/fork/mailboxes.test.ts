@@ -76,10 +76,10 @@ describe('get_mailbox', () => {
 
 describe('create_mailbox', () => {
   it('sends all fields plus extra and returns the stored object', async () => {
-    const { client, calls } = makeClient((m, a) => (m === 'Mailbox/get' && a.ids?.[0] === 'mb-new' ? { list: [{ id: 'mb-new', name: 'New', color: '#fff' }] } : defaultHandler(m, a)));
-    const out: any = await tool('create_mailbox').run({ name: 'New', parentId: 'mb-1', sortOrder: 3, color: '#fff', extra: { x: 1 } }, { client });
-    assert.deepEqual(out, { id: 'mb-new', name: 'New', color: '#fff' });
-    assert.deepEqual(calls[0][1], { accountId: ACCOUNT_ID, create: { new: { parentId: 'mb-1', name: 'New', sortOrder: 3, color: '#fff', x: 1 } } });
+    const { client, calls } = makeClient((m, a) => (m === 'Mailbox/get' && a.ids?.[0] === 'mb-new' ? { list: [{ id: 'mb-new', name: 'New', identityRef: { accountId: ACCOUNT_ID, identityId: 'i-1' } }] } : defaultHandler(m, a)));
+    const out: any = await tool('create_mailbox').run({ name: 'New', parentId: 'mb-1', sortOrder: 3, identityId: 'i-1', autoPurge: true, extra: { x: 1 } }, { client });
+    assert.deepEqual(out, { id: 'mb-new', name: 'New', identityRef: { accountId: ACCOUNT_ID, identityId: 'i-1' } });
+    assert.deepEqual(calls[0][1], { accountId: ACCOUNT_ID, create: { new: { parentId: 'mb-1', name: 'New', sortOrder: 3, autoPurge: true, identityRef: { accountId: ACCOUNT_ID, identityId: 'i-1' }, x: 1 } } });
     assert.deepEqual(calls[1], ['Mailbox/get', { accountId: ACCOUNT_ID, ids: ['mb-new'] }, 'c0']);
   });
 

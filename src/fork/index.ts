@@ -35,7 +35,7 @@ export async function runForkTool(name: string, args: unknown, client: JmapClien
   if (!tool) return undefined;
   guardReadOnly(name, tool.write);
   try {
-    return text(await tool.run((args ?? {}) as Record<string, any>, { client }));
+    return text(await tool.run(coerceArgs(tool.def, (args ?? {}) as Record<string, any>), { client }));
   } catch (e) {
     throw toMcpError(e);
   }
@@ -57,4 +57,26 @@ export function toMcpError(e: unknown): McpError {
     return new McpError(ErrorCode.InvalidRequest, e.message, e.detail as any);
   }
   return new McpError(ErrorCode.InternalError, `Tool execution failed: ${e instanceof Error ? e.message : String(e)}`);
+}
+
+/**
+ * Some clients send every argument as a string ("true", "[\"a\"]", "5").
+ * Convert those by the declared schema type so tools can trust their input.
+ */
+export function coerceArgs(def: ToolDef, args: Record<string, any>): Record<string, any> {
+  const props = (def.inputSchema as any)?.properties ?? {};
+  const out: Record<string, any> = { ...args };
+  for (const [key, raw] of Object.entries(args)) {
+    if (typeof raw !== 'string') continue;
+    const types = [props[key]?.type].flat().filter(Boolean) as string[];
+    if (types.includes('string') || types.length === 0) continue;
+    const v = raw.trim();
+    if (types.includes('boolean') && /^(true|false)$/i.test(v)) out[key] = v.toLowerCase() === 'true';
+    else if (types.includes('null') && v === 'null') out[key] = null;
+    else if ((types.includes('number') || types.includes('integer')) && v !== '' && !isNaN(Number(v))) out[key] = Number(v);
+    else if (types.includes('array') || types.includes('object')) {
+      try { out[key] = JSON.parse(v); } catch { if (types.includes('array')) out[key] = v.split(',').map((x) => x.trim()).filter(Boolean); }
+    }
+  }
+  return out;
 }

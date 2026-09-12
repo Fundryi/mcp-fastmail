@@ -8,7 +8,7 @@ const MAIL = ['mail'];
 const TREE_PROPS = ['id', 'name', 'parentId', 'role', 'totalEmails', 'totalThreads'];
 
 // ponytail: unconfirmed against live Fastmail, verify with a raw get
-const UNCONFIRMED = 'color is the property Cyrus (the server Fastmail runs) stores, hex string like "#ff0000"; identityRef is NOT a confirmed property name. Run get_mailbox on a folder that has a default address set and pass the real name via `extra` if it differs.';
+const NOTE = 'Live check 2026-09: Fastmail exposes no folder colour over JMAP (the property is rejected), so colour cannot be set here. identityRef is stored as { accountId, identityId }; pass identityId (string) or null to clear.';
 
 const target = {
   mailboxId: { type: 'string', description: 'Mailbox id. Give this or `path`.' },
@@ -20,8 +20,13 @@ const editable = {
   parentId: { type: ['string', 'null'], description: 'Parent mailbox id, null for top level.' },
   isSubscribed: { type: 'boolean' },
   sortOrder: { type: 'number' },
-  color: { type: ['string', 'null'], description: 'Folder colour as a hex string, null to clear.' },
-  identityRef: { type: 'string', description: 'Identity id linked to the folder. Unconfirmed property name.' },
+  identityId: { type: ['string', 'null'], description: 'Identity to use as From when composing in this folder (see list_identities). null clears it.' },
+  autoPurge: { type: 'boolean', description: 'Fastmail: delete mail older than purgeOlderThanDays.' },
+  purgeOlderThanDays: { type: 'number', description: 'Fastmail: age limit used by autoPurge.' },
+  learnAsSpam: { type: 'boolean', description: 'Fastmail: train the spam filter on mail moved here.' },
+  autoLearn: { type: 'boolean', description: 'Fastmail: learn from mail in this folder.' },
+  isCollapsed: { type: 'boolean', description: 'Fastmail: collapsed in the folder list.' },
+  suppressDuplicates: { type: 'boolean', description: 'Fastmail: hide duplicate messages.' },
   extra: { type: 'object', description: 'Raw Mailbox properties passed through untouched.' },
 };
 
@@ -62,10 +67,13 @@ function isSelfOrDescendant(tree: any[], id: string, candidateParent: string): b
   return false;
 }
 
-function patchFrom(args: Record<string, any>): Record<string, unknown> {
+function patchFrom(args: Record<string, any>, accountId: string): Record<string, unknown> {
   const patch: Record<string, unknown> = {};
-  for (const key of ['name', 'parentId', 'isSubscribed', 'sortOrder', 'color', 'identityRef']) {
+  for (const key of ['name', 'parentId', 'isSubscribed', 'sortOrder', 'autoPurge', 'purgeOlderThanDays', 'learnAsSpam', 'autoLearn', 'isCollapsed', 'suppressDuplicates']) {
     if (key in args && args[key] !== undefined) patch[key] = args[key];
+  }
+  if ('identityId' in args && args.identityId !== undefined) {
+    patch.identityRef = args.identityId === null ? null : { accountId, identityId: String(args.identityId) };
   }
   if (typeof patch.name === 'string' && patch.name.includes('/')) {
     throw new RefusedError('name must not contain "/". Pass a leaf name and use parentId to nest');
@@ -107,7 +115,7 @@ export const tools: ForkTool[] = [
   {
     def: {
       name: 'get_mailbox',
-      description: 'Fetch one mailbox with every property Fastmail stores (no properties filter), including whatever it uses for folder colour and identity link. Returns the raw Mailbox object. Refuses when neither mailboxId nor path is given or the mailbox does not exist.',
+      description: 'Fetch one mailbox with every property Fastmail stores (no properties filter), including the Fastmail-only settings (identityRef, autoPurge, purgeOlderThanDays, learnAsSpam, autoLearn, hidden, isCollapsed, suppressDuplicates, sort). Returns the raw Mailbox object. Refuses when neither mailboxId nor path is given or the mailbox does not exist.',
       inputSchema: { type: 'object', properties: { ...target } },
     },
     write: false,
@@ -118,13 +126,13 @@ export const tools: ForkTool[] = [
   {
     def: {
       name: 'create_mailbox',
-      description: `Create a mailbox (folder). Sends name, parentId (null = top level), isSubscribed, sortOrder, color, identityRef and any raw properties in \`extra\`, then re-fetches and returns the stored Mailbox object as the server has it. Refuses a name containing "/". ${UNCONFIRMED}`,
+      description: `Create a mailbox (folder). Sends name, parentId (null = top level), isSubscribed, sortOrder, identityId, the Fastmail folder settings (autoPurge, purgeOlderThanDays, learnAsSpam, autoLearn, isCollapsed, suppressDuplicates) and any raw properties in \`extra\`, then re-fetches and returns the stored Mailbox object as the server has it. Refuses a name containing "/". ${NOTE}`,
       inputSchema: { type: 'object', properties: { ...editable }, required: ['name'] },
     },
     write: true,
     async run(args, { client }) {
       const name = requireString(args, 'name');
-      const create = { parentId: null, ...patchFrom({ ...args, name }) };
+      const create = { parentId: null, ...patchFrom({ ...args, name }, (await client.getSession()).accountId) };
       const echo = assertSet(await jmap(client, MAIL, 'Mailbox/set', { create: { new: create } }), 'created', 'new');
       return getOne(client, echo.id);
     },
@@ -132,13 +140,13 @@ export const tools: ForkTool[] = [
   {
     def: {
       name: 'update_mailbox',
-      description: `Patch one mailbox: name, parentId (null = top level), isSubscribed, sortOrder, color, identityRef, or raw properties in \`extra\`. Only the fields given are sent. Returns the re-fetched stored Mailbox object. Refuses when no field is given, when name contains "/", or when parentId is the mailbox itself or one of its descendants. ${UNCONFIRMED}`,
+      description: `Patch one mailbox: name, parentId (null = top level), isSubscribed, sortOrder, identityId, the Fastmail folder settings (autoPurge, purgeOlderThanDays, learnAsSpam, autoLearn, isCollapsed, suppressDuplicates), or raw properties in \`extra\`. Only the fields given are sent. Returns the re-fetched stored Mailbox object. Refuses when no field is given, when name contains "/", or when parentId is the mailbox itself or one of its descendants. ${NOTE}`,
       inputSchema: { type: 'object', properties: { ...target, ...editable } },
     },
     write: true,
     async run(args, { client }) {
       const id = await resolveId(client, args);
-      const patch = patchFrom(args);
+      const patch = patchFrom(args, (await client.getSession()).accountId);
       if (!Object.keys(patch).length) throw new RefusedError('Refused: no field to update was given');
       if (typeof patch.parentId === 'string' && isSelfOrDescendant(await getTree(client), id, patch.parentId)) {
         throw new RefusedError('Refused: parentId is the mailbox itself or one of its descendants');
