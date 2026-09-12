@@ -16,7 +16,7 @@ const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
 const REPORT = join(ROOT, "UPSTREAM-UPDATE.md");
 
 // Upstream files this fork edited. Additive lines only, but a conflict can still land here.
-const FORK_TOUCHED = [".gitignore", "README.md", "package.json", "src/index.ts"];
+const FORK_TOUCHED = [".github/dependabot.yml", ".gitignore", "README.md", "package.json", "src/index.ts"];
 
 const PROMPT = `Merge the latest upstream into this fork without losing our additions.
 
