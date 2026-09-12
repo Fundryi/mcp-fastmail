@@ -7,7 +7,6 @@ import { ForkTool, RefusedError, assertSet, byPath, jmap, requireConfirm, requir
 const MAIL = ['mail'];
 const TREE_PROPS = ['id', 'name', 'parentId', 'role', 'totalEmails', 'totalThreads'];
 
-// ponytail: unconfirmed against live Fastmail, verify with a raw get
 const NOTE = 'Live check 2026-09: with an API token Fastmail accepts only name, parentId, isSubscribed and sortOrder. Folder colour, the identity link (identityRef), autoPurge, learnAsSpam, isCollapsed and the other Fastmail-only fields are read-only over JMAP; set them in the web app. get_mailbox still shows them.';
 
 const target = {

@@ -8,7 +8,7 @@ An **unofficial** Model Context Protocol (MCP) server that provides access to th
 
 This is a private copy of [MadLlama25/fastmail-mcp](https://github.com/MadLlama25/fastmail-mcp). It is not a GitHub fork: it is an independent repo with upstream's history underneath, so it can stay private and still merge upstream cleanly. Everything below this section is upstream's own documentation.
 
-Upstream's tools are untouched. The fork adds 49 tools of its own under `src/fork/`, wired in through four lines in `src/index.ts`. A fork tool with the same name as an upstream tool replaces it and keeps every upstream argument.
+Upstream's tools are untouched. The fork adds 54 tools of its own under `src/fork/`, wired in through a few hook lines in `src/index.ts`. A fork tool with the same name as an upstream tool replaces it and keeps every upstream argument.
 
 - Mailboxes: `get_mailbox` (raw object), `create_mailbox` (subscribed by default, with `isSubscribed`, `sortOrder`, raw `extra`), `update_mailbox`, `bulk_update_mailboxes` (same patch on a list or a subtree, `dryRun`), `delete_mailbox` (needs `confirm: true`, can move contents first), `merge_mailbox`
 - Listing and search: `list_emails` and `advanced_search` gain `fields`, `position`, `mailboxIds` in every item, `header`, `toDomain`, `cc`, `bcc`, `body`, size limits and `includeChildren`; new `summarize_mailbox`, `list_unread_across`, `find_duplicates`, `extract_codes`, `get_thread` with bodies
@@ -22,7 +22,7 @@ Upstream's tools are untouched. The fork adds 49 tools of its own under `src/for
 
 `skills/fastmail-mcp/SKILL.md` is an agent skill for using these tools well: which tool fits which task, how to keep results small, and the dry run then confirm flow. Copy the folder into your agent's skills directory. The server also sends a short form of it as MCP instructions on connect.
 
-All of it is tested against a mocked transport and then against a live account. Property names marked "unconfirmed" in a tool description (`identityRef`, the snooze shape, masked email fields) need one live call to confirm.
+All of it is tested against a mocked transport and then against a live account. With a plain API token the session has no sieve, quota or vacation capability; those tools refuse and name the missing capability.
 
 Scaffolding:
 

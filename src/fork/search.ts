@@ -157,11 +157,10 @@ export const tools: ForkTool[] = [
     write: false,
     def: {
       name: 'list_address_books',
-      description: 'List the address books on the account (AddressBook/get, RFC 9610). Returns [{id, name, description, isSubscribed, isDefault, shareWith, myRights}] as the server gives them. Use it to see whether a shared company directory is a second address book. Unconfirmed against live Fastmail: the session may not advertise urn:ietf:params:jmap:contacts, in which case the call is refused.',
+      description: 'List the address books on the account (AddressBook/get, RFC 9610). Returns [{id, name, description, isSubscribed, isDefault, shareWith, myRights}] as the server gives them. Use it to see whether a shared company directory is a second address book. Refuses when the token lacks the contacts capability.',
       inputSchema: { type: 'object', properties: {}, required: [] },
     },
     async run(_args, { client }) {
-      // ponytail: unconfirmed against live Fastmail, verify with a raw get
       const r = await jmap(client, CONTACTS, 'AddressBook/get', { ids: null });
       return (r.list ?? []).map((b: any) => ({ id: b.id, name: b.name, description: b.description, isSubscribed: b.isSubscribed, isDefault: b.isDefault, shareWith: b.shareWith, myRights: b.myRights }));
     },
