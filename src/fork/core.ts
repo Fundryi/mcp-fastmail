@@ -136,7 +136,7 @@ export function requireConfirm(args: Record<string, any>, what: string): void {
 
 /**
  * Resolve a folder path. Fastmail nests every user folder under Inbox, so
- * "Work/STEAM" is tried as given and then as "Inbox/Work/STEAM".
+ * "Work/Receipts" is tried as given and then as "Inbox/Work/Receipts".
  */
 export async function byPath(client: JmapClient, path: string): Promise<{ id: string; name: string; parentId: string | null; path: string }> {
   try {

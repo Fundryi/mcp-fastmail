@@ -36,7 +36,7 @@ Built on [MadLlama25/fastmail-mcp](https://github.com/MadLlama25/fastmail-mcp) b
 Needs Node.js 20 or newer and a Fastmail API token. Create the token at Fastmail, Settings, Privacy & Security, Integrations, API tokens. Give it the scopes you plan to use: Email, Email submission, Contacts, Masked Email.
 
 ```bash
-git clone <this repo> fastmail-mcp && cd fastmail-mcp
+git clone https://github.com/Fundryi/mcp-fastmail.git && cd mcp-fastmail
 npm ci
 npm run build
 cp .env.example .env    # then put your token in FASTMAIL_API_TOKEN
