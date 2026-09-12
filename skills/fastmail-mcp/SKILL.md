@@ -103,6 +103,23 @@ still shows them.
 `FASTMAIL_READ_ONLY=1` on the server makes every write tool refuse. Use it
 for a check-only session.
 
+## After creating folders
+
+The web app subscribes a new folder on its own. Raw JMAP does not, and an
+unsubscribed folder is hidden in IMAP clients. `create_mailbox` now sends
+`isSubscribed: true` unless told otherwise, but check anyway; an older server
+build did not.
+
+1. `list_mailboxes` with `properties: ["id","name","parentId","role","isSubscribed"]`.
+   Every folder you made must show `isSubscribed: true` under the right parent.
+2. If any is false, `bulk_update_mailboxes` with `parentId` of the folder you
+   built under and `isSubscribed: true`. Dry run, then for real. It skips
+   folders with a role and folders already set.
+3. Colour, the identity link and auto purge cannot be set over JMAP. List
+   them for the user as web app steps; do not try.
+4. Leave system folders (any with a `role`) and Fastmail's own "Memos"
+   folder alone.
+
 ## Recipes
 
 **New alias folder with platform subfolders.** `create_mailbox` with `name`

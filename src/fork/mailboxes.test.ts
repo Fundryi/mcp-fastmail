@@ -79,7 +79,7 @@ describe('create_mailbox', () => {
     const { client, calls } = makeClient((m, a) => (m === 'Mailbox/get' && a.ids?.[0] === 'mb-new' ? { list: [{ id: 'mb-new', name: 'New', sortOrder: 3 }] } : defaultHandler(m, a)));
     const out: any = await tool('create_mailbox').run({ name: 'New', parentId: 'mb-1', sortOrder: 3, autoPurge: true, extra: { x: 1 } }, { client });
     assert.deepEqual(out, { id: 'mb-new', name: 'New', sortOrder: 3 });
-    assert.deepEqual(calls[0][1], { accountId: ACCOUNT_ID, create: { new: { parentId: 'mb-1', name: 'New', sortOrder: 3, x: 1 } } });
+    assert.deepEqual(calls[0][1], { accountId: ACCOUNT_ID, create: { new: { parentId: 'mb-1', isSubscribed: true, name: 'New', sortOrder: 3, x: 1 } } });
     assert.deepEqual(calls[1], ['Mailbox/get', { accountId: ACCOUNT_ID, ids: ['mb-new'] }, 'c0']);
   });
 
@@ -87,6 +87,47 @@ describe('create_mailbox', () => {
     const { client, calls } = makeClient(defaultHandler);
     await rejects(tool('create_mailbox').run({ name: 'a/b' }, { client }), /must not contain/);
     assert.equal(calls.length, 0);
+  });
+
+  it('lets the caller unsubscribe explicitly', async () => {
+    const { client, calls } = makeClient((m, a) => (m === 'Mailbox/get' && a.ids?.[0] === 'mb-new' ? { list: [{ id: 'mb-new' }] } : defaultHandler(m, a)));
+    await tool('create_mailbox').run({ name: 'Hidden', isSubscribed: false }, { client });
+    assert.equal(calls[0][1].create.new.isSubscribed, false);
+  });
+});
+
+describe('bulk_update_mailboxes', () => {
+  // Same tree, with subscription state: Parent subscribed, Child and Other not.
+  const SUBS: Record<string, boolean> = { 'mb-inbox': true, 'mb-1': true, 'mb-2': false, 'mb-3': false };
+  const handler = (m: string, a: any) => {
+    if (m === 'Mailbox/get') {
+      const list = (a.ids ? TREE.filter((mb) => a.ids.includes(mb.id)) : TREE).map((mb) => ({ ...mb, isSubscribed: SUBS[mb.id], sortOrder: 0 }));
+      return { list, notFound: [] };
+    }
+    return defaultHandler(m, a);
+  };
+
+  it('dry run plans the subtree and skips folders already set', async () => {
+    const { client, calls } = makeClient(handler);
+    const out: any = await tool('bulk_update_mailboxes').run({ parentId: 'mb-1', isSubscribed: true, dryRun: true }, { client });
+    assert.deepEqual(out, { dryRun: true, count: 1, changed: [{ id: 'mb-2', path: 'Parent/Child', before: { isSubscribed: false }, after: { isSubscribed: true } }], skipped: [] });
+    assert.equal(calls.filter(([m]) => m === 'Mailbox/set').length, 0);
+  });
+
+  it('writes one Mailbox/set for the ids and echoes the stored values', async () => {
+    const { client, calls } = makeClient(handler);
+    const out: any = await tool('bulk_update_mailboxes').run({ mailboxIds: ['mb-1', 'mb-2', 'mb-3', 'mb-inbox'], isSubscribed: true }, { client });
+    const set = calls.find(([m]) => m === 'Mailbox/set')!;
+    assert.deepEqual(set[1].update, { 'mb-2': { isSubscribed: true }, 'mb-3': { isSubscribed: true } });
+    assert.equal(out.count, 2);
+    assert.deepEqual(out.skipped.map((s: any) => [s.id, s.reason]), [['mb-inbox', 'system folder (role: inbox)'], ['mb-1', 'already set']]);
+  });
+
+  it('refuses without a field, an unknown id, or a parent without children', async () => {
+    const { client } = makeClient(handler);
+    await rejects(tool('bulk_update_mailboxes').run({ parentId: 'mb-1' }, { client }), /isSubscribed and\/or sortOrder/);
+    await rejects(tool('bulk_update_mailboxes').run({ mailboxIds: ['nope'], isSubscribed: true }, { client }), /Mailbox not found: nope/);
+    await rejects(tool('bulk_update_mailboxes').run({ parentId: 'mb-3', isSubscribed: true }, { client }), /no child folders/);
   });
 });
 
