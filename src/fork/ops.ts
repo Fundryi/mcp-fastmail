@@ -3,6 +3,7 @@
 import { readFile } from 'fs/promises';
 import { JmapClient, buildEmailQueryFilter } from '../jmap-client.js';
 import { ForkTool, JmapError, RefusedError, assertSet, jmap, jmapBatch, requireConfirm, requireString, requireStringArray } from './core.js';
+import { byPath } from './core.js';
 
 const MAIL = ['mail'];
 const CORE_CAP = 'urn:ietf:params:jmap:core';
@@ -20,7 +21,7 @@ async function mailboxByRole(client: JmapClient, role: string): Promise<string> 
 
 async function resolveMailboxId(client: JmapClient, args: Record<string, any>): Promise<string | undefined> {
   if (typeof args.mailboxId === 'string' && args.mailboxId.trim()) return args.mailboxId.trim();
-  if (typeof args.path === 'string' && args.path.trim()) return (await client.getMailboxByName(args.path.trim())).id;
+  if (typeof args.path === 'string' && args.path.trim()) return (await byPath(client, args.path.trim())).id;
   return undefined;
 }
 

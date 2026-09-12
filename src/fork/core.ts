@@ -87,7 +87,10 @@ export async function jmap(client: JmapClient, caps: string[], method: string, a
  */
 export function assertSet(result: any, kind: 'created' | 'updated' | 'destroyed', id: string): any {
   const failed = result?.[`not${kind[0].toUpperCase()}${kind.slice(1)}`]?.[id];
-  if (failed) throw new JmapError(failed.type ?? 'setError', failed.description, failed);
+  if (failed) {
+    const props = Array.isArray(failed.properties) ? ` (properties: ${failed.properties.join(', ')})` : '';
+    throw new JmapError(failed.type ?? 'setError', (failed.description ?? '') + props || undefined, failed);
+  }
   const ok = result?.[kind];
   if (Array.isArray(ok)) {
     if (!ok.includes(id)) throw new JmapError('setError', `${id} not in ${kind}`);
@@ -125,5 +128,22 @@ export function requireStringArray(args: Record<string, any>, key: string): stri
 export function requireConfirm(args: Record<string, any>, what: string): void {
   if (args?.confirm !== true) {
     throw new RefusedError(`Refused: ${what}. Pass confirm: true to proceed.`, { needsConfirm: true });
+  }
+}
+
+/**
+ * Resolve a folder path. Fastmail nests every user folder under Inbox, so
+ * "FUNDRYI.DE/STEAM" is tried as given and then as "Inbox/FUNDRYI.DE/STEAM".
+ */
+export async function byPath(client: JmapClient, path: string): Promise<{ id: string; name: string; parentId: string | null; path: string }> {
+  try {
+    return await client.getMailboxByName(path);
+  } catch (e) {
+    if (/^Inbox\//i.test(path)) throw e;
+    try {
+      return await client.getMailboxByName('Inbox/' + path);
+    } catch {
+      throw new RefusedError(`Mailbox not found: ${path} (also tried Inbox/${path})`);
+    }
   }
 }
