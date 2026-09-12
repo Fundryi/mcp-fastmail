@@ -24,6 +24,7 @@ WRITES: DRY RUN, THEN CONFIRM
 - bulk_* tools take emailIds, a mailboxId or a filter. Run with dryRun: true first, read the count, then run for real. Above the confirm threshold (env FASTMAIL_BULK_CONFIRM_THRESHOLD, default 100) pass confirm: true.
 - Every bulk call returns an operationId. undo_operation restores the previous folders and keywords. list_operations shows the last 50 of this process.
 - bulk_delete and delete_email move to Trash. The only permanent destroys are empty_mailbox (Trash or Junk) and delete_mailbox with onDestroyRemoveEmails; both need confirm: true and say so.
+- create_mailbox subscribes the folder by default, as the web app does. After creating folders, check isSubscribed on each; bulk_update_mailboxes with parentId fixes a whole subtree in one call (dryRun first).
 - Mailbox writes accept only name, parentId, isSubscribed and sortOrder. identityRef, autoPurge, learnAsSpam, isCollapsed and colour are read-only with an API token; the server answers invalidProperties. Set them in the web app. get_mailbox shows their current values.
 - FASTMAIL_READ_ONLY=1 makes every write tool refuse.
 

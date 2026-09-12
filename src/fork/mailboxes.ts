@@ -127,13 +127,13 @@ export const tools: ForkTool[] = [
   {
     def: {
       name: 'create_mailbox',
-      description: `Create a mailbox (folder). Sends name, parentId (null = top level), isSubscribed, sortOrder and any raw properties in \`extra\`, then re-fetches and returns the stored Mailbox object as the server has it. Refuses a name containing "/". ${NOTE}`,
+      description: `Create a mailbox (folder). Sends name, parentId (null = top level), isSubscribed (default true, like the web app; over raw JMAP it would default to false and the folder would be hidden in IMAP clients), sortOrder and any raw properties in \`extra\`, then re-fetches and returns the stored Mailbox object as the server has it. Refuses a name containing "/". ${NOTE}`,
       inputSchema: { type: 'object', properties: { ...editable }, required: ['name'] },
     },
     write: true,
     async run(args, { client }) {
       const name = requireString(args, 'name');
-      const create = { parentId: null, ...patchFrom({ ...args, name }) };
+      const create = { parentId: null, isSubscribed: true, ...patchFrom({ ...args, name }) };
       const echo = assertSet(await jmap(client, MAIL, 'Mailbox/set', { create: { new: create } }), 'created', 'new');
       return getOne(client, echo.id);
     },
@@ -192,6 +192,63 @@ export const tools: ForkTool[] = [
       const movedEmails = to && mb.totalEmails > 0 ? await moveAll(client, id, to) : 0;
       await destroy(client, id, removeEmails);
       return { destroyed: id, movedEmails, name: plan.name, path: plan.path };
+    },
+  },
+  {
+    def: {
+      name: 'bulk_update_mailboxes',
+      description: 'Apply one patch (isSubscribed and/or sortOrder) to many folders at once. Scope with mailboxIds, or with parentId / parentPath for every folder below that parent (includeChildren: false limits it to direct children; the parent itself is never touched). System folders (any with a role) are skipped, and so are folders already at the requested value. dryRun: true returns the plan without writing. Returns { count, changed: [{ id, path, before, after }], skipped: [{ id, path, reason }] } with the values re-fetched after the write.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          mailboxIds: { type: 'array', items: { type: 'string' }, description: 'Explicit folder ids. Give this or parentId / parentPath.' },
+          parentId: { type: 'string', description: 'Patch the folders below this id.' },
+          parentPath: { type: 'string', description: 'Patch the folders below this path, e.g. "Parent/Child".' },
+          includeChildren: { type: 'boolean', description: 'With a parent: true (default) takes the whole subtree, false only direct children.' },
+          isSubscribed: { type: 'boolean' },
+          sortOrder: { type: 'number' },
+          dryRun: { type: 'boolean', description: 'Report the plan, write nothing.' },
+        },
+      },
+    },
+    write: true,
+    async run(args, { client }) {
+      const patch: Record<string, unknown> = {};
+      for (const key of ['isSubscribed', 'sortOrder']) if (args[key] !== undefined) patch[key] = args[key];
+      if (!Object.keys(patch).length) throw new RefusedError('Refused: give isSubscribed and/or sortOrder');
+      const tree = (await jmap(client, MAIL, 'Mailbox/get', { ids: null, properties: [...TREE_PROPS, 'isSubscribed', 'sortOrder'] }))?.list ?? [];
+      let scope: any[];
+      if (Array.isArray(args.mailboxIds) && args.mailboxIds.length) {
+        const missing = args.mailboxIds.filter((id: string) => !tree.some((m: any) => m.id === id));
+        if (missing.length) throw new RefusedError(`Mailbox not found: ${missing.join(', ')}`);
+        scope = tree.filter((m: any) => args.mailboxIds.includes(m.id));
+      } else {
+        const parent = await resolveId(client, args, 'parentId', 'parentPath');
+        const deep = args.includeChildren !== false;
+        scope = tree.filter((m: any) => m.id !== parent && (deep ? isSelfOrDescendant(tree, parent, m.parentId) : m.parentId === parent));
+        if (!scope.length) throw new RefusedError(`Refused: "${pathOf(tree, parent)}" has no child folders`);
+      }
+      const skipped: { id: string; path: string; reason: string }[] = [];
+      const changed: { id: string; path: string; before: Record<string, unknown>; after: Record<string, unknown> }[] = [];
+      for (const mb of scope) {
+        const before = Object.fromEntries(Object.keys(patch).map((k) => [k, mb[k]]));
+        if (mb.role) skipped.push({ id: mb.id, path: pathOf(tree, mb.id), reason: `system folder (role: ${mb.role})` });
+        else if (Object.keys(patch).every((k) => mb[k] === patch[k])) skipped.push({ id: mb.id, path: pathOf(tree, mb.id), reason: 'already set' });
+        else changed.push({ id: mb.id, path: pathOf(tree, mb.id), before, after: patch });
+      }
+      if (args.dryRun === true) return { dryRun: true, count: changed.length, changed, skipped };
+      if (changed.length) {
+        // ponytail: one Mailbox/set; chunk at maxObjectsInSet if a tree ever exceeds 4096 folders
+        const update = Object.fromEntries(changed.map((c) => [c.id, patch]));
+        const res = await jmap(client, MAIL, 'Mailbox/set', { update });
+        for (const id of Object.keys(update)) assertSet(res, 'updated', id);
+        const stored = (await jmap(client, MAIL, 'Mailbox/get', { ids: changed.map((c) => c.id), properties: ['id', ...Object.keys(patch)] }))?.list ?? [];
+        for (const c of changed) {
+          const mb = stored.find((m: any) => m.id === c.id);
+          if (mb) c.after = Object.fromEntries(Object.keys(patch).map((k) => [k, mb[k]]));
+        }
+      }
+      return { count: changed.length, changed, skipped };
     },
   },
   {
