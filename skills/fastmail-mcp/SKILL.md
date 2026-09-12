@@ -66,6 +66,10 @@ type MCP. They reach Fastmail Notes, a memo on an email, the company
 directory, calendar RSVP and a calendar compose widget. Use them for those
 jobs only. Mail, folders and bulk work stay on the local tools.
 
+`official_delete_note`, `official_delete_event`, `official_delete_contact`
+and `official_compose_event` only stage a confirm widget. In a host without
+widgets nothing happens; say so and let the user finish in the web app.
+
 ## Keep results small
 
 - Pass `fields` on list and search tools. `["id","from","subject","receivedAt"]`

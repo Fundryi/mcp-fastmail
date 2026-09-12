@@ -36,6 +36,7 @@ SEARCH SYNTAX
 
 OFFICIAL PASSTHROUGH (only when FASTMAIL_MCP_TOKEN is set)
 - Tools prefixed official_ come from Fastmail's own MCP server: Notes, a memo on an email, the company directory, calendar RSVP and compose. Use them only for those jobs; everything else is faster and safer through the local tools.
+- official_delete_* and official_compose_event only stage a confirm widget. Without widget support in the host nothing changes; tell the user to finish in the web app.
 
 NOT AVAILABLE ON AN API TOKEN
 - Sieve rules, quota, vacation responder: the tools exist and refuse with the missing capability named. Folder colour and DKIM/MX status: not reachable over JMAP at all.
