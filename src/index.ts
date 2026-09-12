@@ -15,6 +15,7 @@ import { WebDAVFilesClient, filesAvailabilitySection } from './webdav-files-clie
 import { validateHttpsUrl } from './url-validation.js';
 import { coerceRecipients, coerceStringArray, coerceBool, redactBearerTokens, registerSecret } from './coerce.js';
 import { mergeForkTools, runForkTool, guardReadOnly, toMcpError } from './fork/index.js';
+import { INSTRUCTIONS } from './fork/instructions.js';
 
 const server = new Server(
   {
@@ -25,6 +26,7 @@ const server = new Server(
     capabilities: {
       tools: {},
     },
+    instructions: INSTRUCTIONS,
   }
 );
 
