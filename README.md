@@ -8,7 +8,19 @@ An **unofficial** Model Context Protocol (MCP) server that provides access to th
 
 This is a private copy of [MadLlama25/fastmail-mcp](https://github.com/MadLlama25/fastmail-mcp). It is not a GitHub fork: it is an independent repo with upstream's history underneath, so it can stay private and still merge upstream cleanly. Everything below this section is upstream's own documentation.
 
-Nothing in the server behaviour has changed yet. The fork adds project scaffolding only:
+Upstream's tools are untouched. The fork adds 49 tools of its own under `src/fork/`, wired in through four lines in `src/index.ts`. A fork tool with the same name as an upstream tool replaces it and keeps every upstream argument.
+
+- Mailboxes: `get_mailbox` (raw object), `create_mailbox` (now with `color`, `isSubscribed`, `sortOrder`, `identityRef`, raw `extra`), `update_mailbox`, `delete_mailbox` (needs `confirm: true`, can move contents first), `merge_mailbox`
+- Listing and search: `list_emails` and `advanced_search` gain `fields`, `position`, `mailboxIds` in every item, `header`, `toDomain`, `cc`, `bcc`, `body`, size limits and `includeChildren`; new `summarize_mailbox`, `list_unread_across`, `find_duplicates`, `extract_codes`, `get_thread` with bodies
+- Bulk safety: every `bulk_*` tool takes `emailIds`, a `mailboxId` or a `filter`, supports `dryRun`, and needs `confirm: true` above `FASTMAIL_BULK_CONFIRM_THRESHOLD` (default 100). `list_operations`, `undo_operation` and `export_operation_log` cover the last 50 operations of the process; `FASTMAIL_AUDIT_LOG` appends them to a file
+- Sieve and account: `list_sieve_scripts`, `get_sieve_script`, `validate_sieve`, `set_sieve_script` (backs up the active script, activation needs `confirm`), `create_identity`, `update_identity`, vacation responder, `get_quota`, masked email list/create/update, `get_account_summary` with domains and quota, `list_aliases_with_usage`
+- Sending: `send_email` and `reply_email` pick the identity by `identityId` or `fromEmail`, replies default to the alias the mail was sent to, `sendAt` schedules through SMTP FUTURERELEASE; `forward_email`, `list_scheduled`, `cancel_send`, `snooze_email`, `unsnooze_email`
+- Operations: `unsubscribe` (RFC 8058 one-click, inspect by default), `report_spam`, `report_not_spam`, `import_email` (.eml), `empty_mailbox` (Trash or Junk only, permanent, `confirm` required), `get_changes`, `list_attachments`
+- `FASTMAIL_READ_ONLY=1` refuses every tool that writes. JMAP errors keep their `type` in the MCP error `data`.
+
+All of it is tested against a mocked transport only. Property names marked "unconfirmed" in a tool description (`identityRef`, the snooze shape, masked email fields) need one live call to confirm.
+
+Scaffolding:
 
 - `scripts/check-upstream.mjs` and `.vscode/tasks.json` for the upstream check below
 - `CLAUDE.md`, the working rules for this repo

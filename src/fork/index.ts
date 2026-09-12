@@ -8,8 +8,9 @@ import { tools as emails } from './emails.js';
 import { tools as bulk } from './bulk.js';
 import { tools as account } from './account.js';
 import { tools as sending } from './sending.js';
+import { tools as ops } from './ops.js';
 
-const all: ForkTool[] = [...mailboxes, ...emails, ...bulk, ...account, ...sending];
+const all: ForkTool[] = [...mailboxes, ...emails, ...bulk, ...account, ...sending, ...ops];
 const byName = new Map(all.map((t) => [t.def.name, t]));
 
 // Upstream tools that change state. Fork tools carry their own `write` flag.
