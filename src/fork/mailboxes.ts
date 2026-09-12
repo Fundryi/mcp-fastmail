@@ -104,6 +104,17 @@ async function destroy(client: JmapClient, id: string, onDestroyRemoveEmails: bo
 export const tools: ForkTool[] = [
   {
     def: {
+      name: 'get_mailbox_by_name',
+      description: 'Resolve a folder path to { id, name, parentId, path }. Every user folder lives under Inbox, so "Inbox/Parent/Child" is the full path; "Parent/Child" is accepted too and tried with the Inbox prefix. Refuses when no folder matches. Mailbox ids are stable: resolve once, then use the id.',
+      inputSchema: { type: 'object', properties: { path: { type: 'string', description: 'Folder path, "/" separated.' } }, required: ['path'] },
+    },
+    write: false,
+    async run(args, { client }) {
+      return byPath(client, requireString(args, 'path'));
+    },
+  },
+  {
+    def: {
       name: 'get_mailbox',
       description: 'Fetch one mailbox with every property Fastmail stores (no properties filter), including the Fastmail-only settings (identityRef, autoPurge, purgeOlderThanDays, learnAsSpam, autoLearn, hidden, isCollapsed, suppressDuplicates, sort). Returns the raw Mailbox object. Refuses when neither mailboxId nor path is given or the mailbox does not exist.',
       inputSchema: { type: 'object', properties: { ...target } },

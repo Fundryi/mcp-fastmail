@@ -190,4 +190,17 @@ describe('merge_mailbox', () => {
     const { client } = makeClient(defaultHandler);
     await rejects(tool('merge_mailbox').run({ source: 'mb-2', target: 'mb-3' }, { client }), /confirm: true/);
   });
+
+  it('get_mailbox_by_name falls back to the Inbox prefix', async () => {
+    const { client } = makeClient(defaultHandler);
+    let calls = 0;
+    mock.method(client, 'getMailboxByName', async (path: string) => {
+      calls++;
+      if (path === 'Inbox/A/B') return { id: 'mb-b', name: 'B', parentId: 'mb-a', path };
+      throw new Error(`Mailbox not found: ${path}`);
+    });
+    const out: any = await tool('get_mailbox_by_name').run({ path: 'A/B' }, { client });
+    assert.equal(out.id, 'mb-b');
+    assert.equal(calls, 2);
+  });
 });
