@@ -21,7 +21,7 @@ const FORK_TOUCHED = [".gitignore", "README.md", "package.json", "src/index.ts"]
 const PROMPT = `Merge the latest upstream into this fork without losing our additions.
 
 Context: this repo is a private fork of MadLlama25/fastmail-mcp.
-Our additions are listed in README.md ("About this fork") and CLAUDE.local.md.
+Our additions are listed in README.md and docs/TOOLS.md; upstream's own README is kept verbatim in docs/UPSTREAM-README.md and is the file to diff against.
 Upstream files only carry additive lines.
 
 Steps:

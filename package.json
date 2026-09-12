@@ -14,6 +14,7 @@
     "prepare": "npm run build",
     "test": "tsx --test src/*.test.ts src/fork/*.test.ts",
     "scan:secrets": "node scripts/scan-secrets.mjs --all",
+    "docs:tools": "node scripts/gen-tool-docs.mjs",
     "check:upstream": "node scripts/check-upstream.mjs"
   },
   "engines": {
