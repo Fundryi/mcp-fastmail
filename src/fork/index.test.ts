@@ -8,8 +8,8 @@ import { mock } from 'node:test';
 import { JmapError, RefusedError } from './core.js';
 
 describe('fork registry', () => {
-  it('fork definitions come first and shadow upstream tools with the same name', () => {
-    const merged = mergeForkTools([
+  it('fork definitions come first and shadow upstream tools with the same name', async () => {
+    const merged = await mergeForkTools([
       { name: 'list_mailboxes', description: 'up', inputSchema: {} },
       { name: 'create_mailbox', description: 'up', inputSchema: {} },
     ]);

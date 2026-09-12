@@ -31,6 +31,12 @@ SENDING
 - send_email and reply_email choose the From identity by identityId or fromEmail. A reply defaults to the identity the original was addressed to, including *@domain catch-all identities. sendAt schedules; list_scheduled and cancel_send manage it.
 - snooze_email needs a mailbox with role "snoozed". Fastmail creates it the first time snooze is used in the web app.
 
+SEARCH SYNTAX
+- search_emails takes a Gmail-style string: from:, to:, cc:, subject:, body:, has:attachment, is:unread, is:flagged, in:<folder path or role>, -in:, after:, before:, newer_than:7d, larger:1M, header:Name=value, domain:. The answer includes "parsed", the filter the string became.
+
+OFFICIAL PASSTHROUGH (only when FASTMAIL_MCP_TOKEN is set)
+- Tools prefixed official_ come from Fastmail's own MCP server: Notes, a memo on an email, the company directory, calendar RSVP and compose. Use them only for those jobs; everything else is faster and safer through the local tools.
+
 NOT AVAILABLE ON AN API TOKEN
 - Sieve rules, quota, vacation responder: the tools exist and refuse with the missing capability named. Folder colour and DKIM/MX status: not reachable over JMAP at all.
 
