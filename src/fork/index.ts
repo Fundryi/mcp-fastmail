@@ -9,9 +9,18 @@ import { tools as bulk } from './bulk.js';
 import { tools as account } from './account.js';
 import { tools as sending } from './sending.js';
 import { tools as ops } from './ops.js';
+import { tools as search } from './search.js';
+import { officialTools } from './official.js';
 
-const all: ForkTool[] = [...mailboxes, ...emails, ...bulk, ...account, ...sending, ...ops];
-const byName = new Map(all.map((t) => [t.def.name, t]));
+const local: ForkTool[] = [...mailboxes, ...emails, ...bulk, ...account, ...sending, ...ops, ...search];
+const byName = new Map(local.map((t) => [t.def.name, t]));
+
+/** Local tools plus the optional official passthrough, once. */
+async function allTools(): Promise<ForkTool[]> {
+  const official = await officialTools();
+  for (const t of official) if (!byName.has(t.def.name)) byName.set(t.def.name, t);
+  return [...local, ...official];
+}
 
 // Upstream tools that change state. Fork tools carry their own `write` flag.
 const UPSTREAM_WRITE = new Set([
@@ -25,17 +34,21 @@ const UPSTREAM_WRITE = new Set([
 ]);
 
 /** Fork definitions first; an upstream tool with the same name is replaced. */
-export function mergeForkTools(upstream: ToolDef[]): ToolDef[] {
+export async function mergeForkTools(upstream: ToolDef[]): Promise<ToolDef[]> {
+  const all = await allTools();
   return [...all.map((t) => t.def), ...upstream.filter((t) => !byName.has(t.name))];
 }
 
 /** Run a fork tool. Returns undefined when `name` is not ours. */
 export async function runForkTool(name: string, args: unknown, client: JmapClient): Promise<any> {
+  await allTools();
   const tool = byName.get(name);
   if (!tool) return undefined;
   guardReadOnly(name, tool.write);
   try {
-    return text(await tool.run(coerceArgs(tool.def, (args ?? {}) as Record<string, any>), { client }));
+    const out: any = await tool.run(coerceArgs(tool.def, (args ?? {}) as Record<string, any>), { client });
+    // A passthrough tool already returns a CallToolResult; hand it through unchanged.
+    return out && Array.isArray(out.content) ? out : text(out);
   } catch (e) {
     // A refusal or a server error is a tool result, not a protocol error. Some
     // hosts drop the body of a protocol error and show only "Tool execution failed".

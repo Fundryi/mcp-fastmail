@@ -50,6 +50,22 @@ server text is newer.
 | What is new since the last sweep | `get_changes` with the saved states | listing everything again |
 | Attachments of one type in a folder | `list_attachments` with `path` and `type` | `get_email_attachments` per mail |
 
+## Search in one string
+
+`search_emails` reads Gmail-style operators: `from:`, `to:`, `cc:`,
+`subject:`, `body:`, `has:attachment`, `is:unread`, `is:flagged`,
+`in:<path or role>`, `-in:`, `after:`, `before:`, `newer_than:7d`,
+`larger:1M`, `header:Name=value`, `domain:example.com`. Bare words are free
+text. The answer carries `parsed`, the filter it became; check it when a
+result looks off.
+
+## Official passthrough, when configured
+
+Tools prefixed `official_` exist only when the server has a second token of
+type MCP. They reach Fastmail Notes, a memo on an email, the company
+directory, calendar RSVP and a calendar compose widget. Use them for those
+jobs only. Mail, folders and bulk work stay on the local tools.
+
 ## Keep results small
 
 - Pass `fields` on list and search tools. `["id","from","subject","receivedAt"]`
@@ -117,6 +133,7 @@ without arguments to store new state strings for the next run.
 | Sieve rules | No sieve capability on API tokens | Web app, rules editor |
 | Identity link on a folder | Read-only over JMAP | Web app, folder settings |
 | DKIM, MX status | No API | DNS lookup on the domain |
+| Notes, email memos, company directory, RSVP | Not in JMAP token scopes | `official_*` tools with a second token of type MCP |
 | Push on new mail | MCP has no long-running process | A cron job calling `get_changes`, outside the MCP |
 | PDF text | No parser in the server | `download_attachment`, then read the file |
 

@@ -199,7 +199,7 @@ function formatQueryResult(result: QueryResult): string {
 
 server.setRequestHandler(ListToolsRequestSchema, async () => {
   return {
-    tools: mergeForkTools([
+    tools: await mergeForkTools([
       {
         name: 'list_mailboxes',
         description: 'List mailboxes in the Fastmail account. By default returns all mailboxes with full metadata; on accounts with hundreds of mailboxes the full result can exceed the MCP tool result window. Use `properties: ["id","name","parentId"]` for a slim view, and/or `parentId` to filter to one level of children.',
