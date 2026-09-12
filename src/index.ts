@@ -14,6 +14,7 @@ import { CalDAVCalendarClient } from './caldav-client.js';
 import { WebDAVFilesClient, filesAvailabilitySection } from './webdav-files-client.js';
 import { validateHttpsUrl } from './url-validation.js';
 import { coerceRecipients, coerceStringArray, coerceBool, redactBearerTokens, registerSecret } from './coerce.js';
+import { mergeForkTools, runForkTool, guardReadOnly, toMcpError } from './fork/index.js';
 
 const server = new Server(
   {
@@ -196,7 +197,7 @@ function formatQueryResult(result: QueryResult): string {
 
 server.setRequestHandler(ListToolsRequestSchema, async () => {
   return {
-    tools: [
+    tools: mergeForkTools([
       {
         name: 'list_mailboxes',
         description: 'List mailboxes in the Fastmail account. By default returns all mailboxes with full metadata; on accounts with hundreds of mailboxes the full result can exceed the MCP tool result window. Use `properties: ["id","name","parentId"]` for a slim view, and/or `parentId` to filter to one level of children.',
@@ -1565,7 +1566,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
           },
         },
       },
-    ],
+    ]),
   };
 });
 
@@ -1575,6 +1576,9 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
   try {
 
     const client = initializeClient();
+    guardReadOnly(name);
+    const forkResult = await runForkTool(name, args, client);
+    if (forkResult !== undefined) return forkResult;
 
     switch (name) {
       case 'list_mailboxes': {
@@ -2778,11 +2782,8 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       if (safe === error.message) throw error;
       throw new McpError((error as any).code ?? ErrorCode.InternalError, safe);
     }
-    const raw = error instanceof Error ? error.message : String(error);
-    throw new McpError(
-      ErrorCode.InternalError,
-      `Tool execution failed: ${redactBearerTokens(raw)}`
-    );
+    const mapped = toMcpError(error);
+    throw new McpError((mapped as any).code ?? ErrorCode.InternalError, redactBearerTokens(mapped.message), (mapped as any).data);
   }
 });
 
