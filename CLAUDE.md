@@ -44,9 +44,19 @@ bar.
   and never holds a value.
 - No real email address, mailbox id, domain or token in code, tests, comments
   or committed docs. Use `user@example.com`.
+- This covers comments, examples, test fixtures, commit messages and docs.
+  A real domain in a code comment is a leak. Use `example.com`, `Work/Receipts`,
+  `user@example.com`.
 - `npm run scan:secrets` runs upstream's scanner. Run it before every push.
-  A personal denylist goes in `.secret-scan-local.txt` (gitignored); copy
-  `.secret-scan-local.txt.example` to start one.
+  It only knows the owner's own names when `.secret-scan-local.txt` (gitignored)
+  exists; keep that file filled with every personal domain, address and path.
+  `git config core.hooksPath .githooks` makes the same scan run on every commit.
+- Before a repo goes public, grep the whole history, not only the tree:
+  `git log --all -p | grep -i <term>`. A leak found there needs
+  `git filter-repo --replace-text <file> --refs <upstream-tip>..main`, limited
+  to our own commits so upstream's hashes stay and merges keep working, then a
+  push with `--force-with-lease`, then delete every remote branch that still
+  points at the old history.
 
 ## Safe writes
 
