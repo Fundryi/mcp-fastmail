@@ -13,6 +13,18 @@ can stay private and still merge upstream cleanly.
 - `origin` is our repo. Push here.
 - `upstream` is read only. Never push to it.
 
+## Docs, and keeping them true
+
+- README.md is ours. Upstream's README lives verbatim in docs/UPSTREAM-README.md;
+  on a merge, diff upstream's new README against that file and carry over
+  what matters, then refresh the copy.
+- docs/TOOLS.md is generated. After any tool or description change run
+  `npm run docs:tools` and commit the result. Never edit it by hand.
+- llms.txt indexes what an agent should read. Add a line when a doc file is
+  added or moved.
+- A number in a doc (tool counts, test counts) goes stale. Check it against
+  the code before you repeat it.
+
 ## Upstream merges
 
 `npm run check:upstream` fetches upstream and writes UPSTREAM-UPDATE.md when

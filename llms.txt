@@ -1,0 +1,27 @@
+# Fastmail MCP
+
+> Unofficial MCP server for Fastmail over JMAP, CalDAV and WebDAV. A fork of MadLlama25/fastmail-mcp with 54 added or re-implemented tools, a dry-run-then-confirm safety model, undo for bulk work, an agent skill, and server instructions sent on connect.
+
+Two ways an agent meets this project: through the tools (the server sends instructions on connect, and the skill holds the long form), or as a codebase (the working rules below).
+
+## Using the server
+
+- [Skill](skills/fastmail-mcp/SKILL.md): which tool fits which task, how to keep results small, dry run then confirm, recipes, a checklist after creating folders.
+- [Server instructions](src/fork/instructions.ts): the short form every MCP client receives on connect.
+- [Tool reference](docs/TOOLS.md): every tool with every parameter, generated from the server.
+- [Environment variables](.env.example): every setting, documented, no values.
+
+## Working on the code
+
+- [CLAUDE.md](CLAUDE.md): rules for this repo. Additive changes to upstream files, safe writes, no permanent delete, secrets, tests.
+- [AGENTS.md](AGENTS.md): the same rules in the form Codex reads.
+- [README](README.md): overview, quick start, safety model, what Fastmail does not allow.
+- [Upstream README](docs/UPSTREAM-README.md): the original project's manual, verbatim. CalDAV and WebDAV setup, attachments on send, troubleshooting.
+- [scripts/check-upstream.mjs](scripts/check-upstream.mjs): upstream merge check and the list of upstream files this fork touched.
+
+## Facts that save a round trip
+
+- Every user folder sits under Inbox. Paths without the Inbox prefix are accepted.
+- A plain API token has mail, submission, contacts and masked email. No sieve, quota or vacation responder; those tools refuse and name the capability.
+- Mailbox writes accept name, parentId, isSubscribed and sortOrder. Colour and the identity link are web-app only.
+- Errors come back as tool results with isError and a JSON body: the JMAP error type, or needsConfirm, or readOnly.
