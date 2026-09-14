@@ -6,8 +6,42 @@ Built on [MadLlama25/fastmail-mcp](https://github.com/MadLlama25/fastmail-mcp) b
 
 > Not affiliated with, endorsed by, or supported by Fastmail. "Fastmail" is a trademark of Fastmail Pty Ltd, used here only to describe compatibility with their public APIs. Use at your own risk under the MIT license.
 
+## Why this one
+
+Three servers can put Fastmail in front of an AI. Each is a step up from the last.
+
+| | Fastmail's own MCP | Upstream fork | This fork |
+|---|:---:|:---:|:---:|
+| Tools | 30 | 52 | 91 |
+| Read, search, send mail | Yes | Yes | Yes |
+| Gmail-style search string | No | No | Yes |
+| Folders: create, rename, move | No | Create only | Yes, plus merge, delete with contents moved, subtree patch |
+| Bulk move, delete, label | No | Yes | Yes |
+| Dry run before every bulk write | No | Test tool only | Yes, on every bulk tool |
+| Confirm gate above a threshold | No | No | Yes |
+| Undo a bulk operation | No | No | Yes, last 50 |
+| Audit log of bulk writes | No | No | Yes, optional file |
+| Read-only mode | No | No | Yes |
+| Reply from the alias that received the mail | No | No | Yes, catch-all included |
+| Scheduled send, list, cancel | No | No | Yes |
+| Snooze, forward, unsubscribe, report spam | No | No | Yes |
+| One-time codes, duplicates, per-sender summary, unread across a tree | No | No | Yes |
+| Identities, masked email, aliases with usage, quota, change tracking | No | Identities only | Yes |
+| Contacts | Directory search | Yes | Yes |
+| Calendar | Yes | Yes, over CalDAV | Yes, over CalDAV or passthrough |
+| Notes, email memos, company directory, RSVP | Yes | No | Yes, via passthrough to Fastmail's MCP |
+| Server instructions sent on connect | No | No | Yes |
+| Agent skill included | No | No | Yes |
+| Structured errors an agent can branch on | No | Partly | Yes |
+| Permanent delete by default | Yes, confirm widget | Trash | Trash; destroy needs confirm |
+| Runs where | Fastmail's cloud, HTTP | Your machine | Your machine, optional cloud passthrough |
+| Token type | MCP | JMAP API token | JMAP API token, optional MCP token |
+
+Fastmail's own MCP is the only one that reaches Notes and the company directory. This fork wraps it, so you lose nothing by starting here.
+
 ## Contents
 
+- [Why this one](#why-this-one)
 - [What you get](#what-you-get)
 - [Quick start](#quick-start)
 - [Configuration](#configuration)
