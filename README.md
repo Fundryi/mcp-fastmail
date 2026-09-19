@@ -172,7 +172,7 @@ docs/UPSTREAM-README.md    upstream's README, verbatim
 scripts/check-upstream.mjs new upstream commits and files we both touched
 ```
 
-Working rules for this repo are in [CLAUDE.md](CLAUDE.md) and [AGENTS.md](AGENTS.md). Upstream's own guide, including CalDAV and WebDAV setup, attachments on send, contacts scope, and troubleshooting, is [docs/UPSTREAM-README.md](docs/UPSTREAM-README.md).
+Working rules for this repo are in [AGENTS.md](AGENTS.md). Upstream's own guide, including CalDAV and WebDAV setup, attachments on send, contacts scope, and troubleshooting, is [docs/UPSTREAM-README.md](docs/UPSTREAM-README.md).
 
 ## Staying current with upstream
 

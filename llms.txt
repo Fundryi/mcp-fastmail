@@ -13,8 +13,8 @@ Two ways an agent meets this project: through the tools (the server sends instru
 
 ## Working on the code
 
-- [CLAUDE.md](CLAUDE.md): rules for this repo. Additive changes to upstream files, safe writes, no permanent delete, secrets, tests.
-- [AGENTS.md](AGENTS.md): the same rules in the form Codex reads.
+- [AGENTS.md](AGENTS.md): rules for this repo. Additive changes to upstream files, safe writes, no permanent delete, secrets, tests.
+- [CLAUDE.md](CLAUDE.md): a stub that imports AGENTS.md for Claude Code.
 - [README](README.md): overview, quick start, safety model, what Fastmail does not allow.
 - [Upstream README](docs/UPSTREAM-README.md): the original project's manual, verbatim. CalDAV and WebDAV setup, attachments on send, troubleshooting.
 - [scripts/check-upstream.mjs](scripts/check-upstream.mjs): upstream merge check and the list of upstream files this fork touched.

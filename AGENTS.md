@@ -1,7 +1,7 @@
 # AGENTS.md
 
 Rules for working in this repo. Private notes with local paths and account
-details live in Codex.local.md, which is gitignored.
+details live in CLAUDE.local.md, which is gitignored.
 
 ## What this is
 
@@ -12,6 +12,18 @@ can stay private and still merge upstream cleanly.
 
 - `origin` is our repo. Push here.
 - `upstream` is read only. Never push to it.
+
+## Docs, and keeping them true
+
+- README.md is ours. Upstream's README lives verbatim in docs/UPSTREAM-README.md;
+  on a merge, diff upstream's new README against that file and carry over
+  what matters, then refresh the copy.
+- docs/TOOLS.md is generated. After any tool or description change run
+  `npm run docs:tools` and commit the result. Never edit it by hand.
+- llms.txt indexes what an agent should read. Add a line when a doc file is
+  added or moved.
+- A number in a doc (tool counts, test counts) goes stale. Check it against
+  the code before you repeat it.
 
 ## Upstream merges
 
@@ -32,9 +44,21 @@ bar.
   and never holds a value.
 - No real email address, mailbox id, domain or token in code, tests, comments
   or committed docs. Use `user@example.com`.
+- This covers comments, examples, test fixtures, commit messages and docs.
+  A real domain in a code comment is a leak. Use `example.com`, `Work/Receipts`,
+  `user@example.com`.
 - `npm run scan:secrets` runs upstream's scanner. Run it before every push.
+  It only knows the owner's own names when `.secret-scan-local.txt` (gitignored)
+  exists; keep that file filled with every personal domain, address and path.
   A personal denylist goes in `.secret-scan-local.txt` (gitignored); copy
   `.secret-scan-local.txt.example` to start one.
+  `git config core.hooksPath .githooks` makes the same scan run on every commit.
+- Before a repo goes public, grep the whole history, not only the tree:
+  `git log --all -p | grep -i <term>`. A leak found there needs
+  `git filter-repo --replace-text <file> --refs <upstream-tip>..main`, limited
+  to our own commits so upstream's hashes stay and merges keep working, then a
+  push with `--force-with-lease`, then delete every remote branch that still
+  points at the old history.
 
 ## Safe writes
 
@@ -85,3 +109,12 @@ GitHub, as a switch rather than a file edit, so upstream merges stay clean.
 Tags come from `upstream` only. Never run `git fetch --prune-tags` against
 `origin`: origin holds no tags, so it deletes every upstream tag you have.
 Restore with `git fetch upstream --tags`.
+
+## Shared knowledge base
+
+If the shared KB is configured and `../../knowledge-base/AGENTS.md` exists, search it before domain answers or code changes and follow its operating rules.
+
+- Project knowledge: `../../knowledge-base/wiki/projects/mcp-fastmail/`
+- Freshness: when a registered source path changes, follow `../../knowledge-base/wiki/meta/knowledge-freshness.md`.
+
+If the shared KB is unavailable, state that access is unavailable and do not invent its contents.
