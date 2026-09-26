@@ -15,6 +15,19 @@ the summary tools.
 The server also sends instructions on connect. When the two disagree, the
 server text is newer.
 
+## First calls
+
+1. `list_mailboxes` with
+   `properties: ["id","name","parentId","role","totalEmails","unreadEmails"]`.
+   Keep the tree; work by id from here on.
+2. `check_function_availability` if the task touches contacts, calendars
+   (CalDAV) or files (WebDAV). It says which are set up on this server.
+3. `get_session` if a tool refuses with a missing capability.
+
+Every tool carries the `readOnlyHint` annotation. Read-only tools never change
+the account; call them freely. Every other tool writes, so follow the write
+rules below. [docs/TOOLS.md](../../docs/TOOLS.md) marks each tool the same way.
+
 ## How Fastmail is shaped
 
 - Folders are labels. One email can sit in several mailboxes at once.
@@ -145,6 +158,22 @@ shows it. `cancel_send` with the submission id stops it.
 **Weekly sweep.** `list_unread_across` on each domain folder, then
 `summarize_mailbox` with `after` set to seven days ago, then `get_changes`
 without arguments to store new state strings for the next run.
+
+## When a call fails
+
+A failed call is a normal tool result with `isError: true`. The text is JSON:
+
+| Body | Meaning | Do this |
+|---|---|---|
+| `{ "error": "... is required" }` | An argument is missing or wrong | Fix the named argument and call again |
+| `{ "error", "jmap": { "type", "description" } }` | Fastmail refused the request | Read `jmap.type`. `invalidProperties` means the field cannot be set over JMAP; do not retry |
+| `{ "error", "count", "threshold" }` | A bulk call is above the confirm threshold | Show the user the count. Pass `confirm: true` only after they agree |
+| `{ "error", "needsConfirm": true }` | A permanent destroy, or a Sieve script overwrite | Ask the user. Pass `confirm: true` only after they agree |
+| `{ "error", "readOnly": true }` | The server runs with `FASTMAIL_READ_ONLY` | Stop writing. Tell the user |
+| `{ "error", "capability" }` | The token has no scope for this | Do not retry. Use the table below |
+
+Only an unknown tool name comes back as a protocol error (code `-32602`).
+Check the bare name against your tool list.
 
 ## Not possible here, and what to do instead
 

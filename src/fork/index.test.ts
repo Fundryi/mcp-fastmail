@@ -1,7 +1,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { ErrorCode, McpError } from '@modelcontextprotocol/sdk/types.js';
-import { coerceArgs, guardReadOnly, mergeForkTools, runForkTool, toMcpError } from './index.js';
+import { ProtocolErrorCode as ErrorCode, ProtocolError as McpError } from '@modelcontextprotocol/server';
+import { coerceArgs, guardReadOnly, mergeForkTools, runForkTool, toMcpError, toToolError } from './index.js';
 import { JmapClient } from '../jmap-client.js';
 import { FastmailAuth } from '../auth.js';
 import { mock } from 'node:test';
@@ -41,7 +41,17 @@ describe('fork registry', () => {
     assert.equal(r.code, ErrorCode.InvalidRequest);
     assert.equal((r.data as any).needsConfirm, true);
     const g = toMcpError(new Error('boom'));
-    assert.match(g.message, /^MCP error .*Tool execution failed: boom/);
+    assert.match(g.message, /^Tool execution failed: boom/);
+  });
+
+  it('turns tool errors into redacted isError results; only an unknown tool stays a -32602 protocol error', () => {
+    const r: any = toToolError(new McpError(ErrorCode.InvalidParams, 'bad Bearer abcdefghijklmnop1234', { readOnly: true })); // allowlist-secret: synthetic token
+    assert.equal(r.isError, true);
+    const body = JSON.parse(r.content[0].text);
+    assert.equal(body.readOnly, true);
+    assert.doesNotMatch(body.error, /abcdefghijklmnop1234/);
+    assert.throws(() => toToolError(new McpError(ErrorCode.MethodNotFound, 'Unknown tool: x')),
+      (e: any) => e instanceof McpError && e.code === ErrorCode.InvalidParams);
   });
 
   it('coerces string arguments by schema type', () => {

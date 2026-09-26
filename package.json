@@ -29,7 +29,8 @@
   "author": "Jeremy Gill",
   "license": "MIT",
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.29.0",
+    "@modelcontextprotocol/client": "^2.1.0",
+    "@modelcontextprotocol/server": "^2.1.0",
     "rrule": "^2.8.1",
     "tsdav": "^2.3.1"
   },

@@ -16,7 +16,7 @@ const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
 const REPORT = join(ROOT, "UPSTREAM-UPDATE.md");
 
 // Upstream files this fork edited. Additive lines only, but a conflict can still land here.
-const FORK_TOUCHED = [".github/dependabot.yml", ".gitignore", "README.md", "package.json", "src/index.ts"];
+const FORK_TOUCHED = [".github/dependabot.yml", ".gitignore", "README.md", "package.json", "package-lock.json", "src/index.ts", "src/jmap-client.ts"];
 
 const PROMPT = `Merge the latest upstream into this fork without losing our additions.
 
@@ -28,6 +28,11 @@ Steps:
 1. git fetch upstream && git merge upstream/main
 2. If a file conflicts, keep upstream's structure and re-attach our lines
    (the list of touched files is below).
+   This fork runs MCP SDK v2 (@modelcontextprotocol/server and /client);
+   upstream may still use v1 (@modelcontextprotocol/sdk). Keep v2: never
+   re-add @modelcontextprotocol/sdk, keep serveStdio(buildServer) in
+   src/index.ts, and port any new v1 import to the v2 name (McpError and
+   ErrorCode are aliases of ProtocolError and ProtocolErrorCode there).
 3. npm ci
 4. npm run build && npm test && npm run scan:secrets
 5. Read the upstream commits below. If one adds a feature we also ported,

@@ -2,8 +2,7 @@
 // Enabled only when FASTMAIL_MCP_TOKEN is set (an API token of type "MCP").
 // Exposes the official tools our JMAP token cannot reach, under the prefix
 // `official_`, so both servers can run in one client without name clashes.
-import { Client } from '@modelcontextprotocol/sdk/client/index.js';
-import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
+import { Client, StreamableHTTPClientTransport } from '@modelcontextprotocol/client';
 import type { ForkTool, ToolDef } from './core.js';
 import { RefusedError } from './core.js';
 

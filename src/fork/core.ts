@@ -5,7 +5,7 @@ import type { JmapClient } from '../jmap-client.js';
 export interface ToolDef {
   name: string;
   description: string;
-  inputSchema: Record<string, unknown>;
+  inputSchema: { type: 'object'; [key: string]: unknown };
   [extra: string]: unknown;
 }
 

@@ -79,6 +79,8 @@ node dist/index.js
 
 Register the server in your MCP client as a stdio command, `node /path/to/fastmail-mcp/dist/index.js`, with the variables from `.env` in its environment. The client's own tool prefix goes in front of every tool name.
 
+The server speaks MCP 2026-07-28, the stateless revision, and every older revision from 2024-10-07 to 2025-11-25. The same command serves both; the client's first message picks the revision. It is built on the MCP TypeScript SDK v2 (`@modelcontextprotocol/server`).
+
 For Claude Desktop, `npx @anthropic-ai/dxt pack` after the build produces a `.dxt` file you can drag into the app. It asks for the token and the optional CalDAV and WebDAV settings.
 
 ## Configuration
@@ -104,7 +106,8 @@ A tool never changes more than the caller asked for, and never hides how much it
 - **Undo.** Every bulk call returns an `operationId`. `undo_operation` puts the previous folders and keywords back. `list_operations` shows the last 50 of the process.
 - **Echo what was stored.** Writes re-fetch and return the object as the server has it, not as it was sent.
 - **Trash, not destroy.** `delete_email` and `bulk_delete` move to Trash. The only permanent destroys are `empty_mailbox` (Trash or Junk only) and `delete_mailbox`, and both need `confirm: true` and say so.
-- **Structured refusals.** A refused or failed call comes back as a tool error with a JSON body: the JMAP error type, or `needsConfirm`, or `readOnly`. Nothing is swallowed.
+- **Structured refusals.** A refused or failed call comes back as a tool result with `isError: true` and a JSON body: the JMAP error type, or `needsConfirm`, `count` and `threshold`, `readOnly`, or the missing `capability`. The model sees it and can fix its call. Only an unknown tool name is a protocol error. Nothing is swallowed, and tokens are redacted.
+- **Read-only labels.** Every tool carries the `readOnlyHint` annotation, from the same flag that `FASTMAIL_READ_ONLY` uses. A host can ask before each write and let reads through.
 
 ## Tools at a glance
 
@@ -131,6 +134,8 @@ Three things teach an agent to use this server well. Each works alone; together 
 1. **Server instructions.** The server sends a short guide on connect: which tool fits which task, how to keep results small, the dry run then confirm flow. Every MCP client that honours `instructions` gets it for free. Source: [src/fork/instructions.ts](src/fork/instructions.ts).
 2. **The skill.** [skills/fastmail-mcp/SKILL.md](skills/fastmail-mcp/SKILL.md) is the long form with recipes and a checklist for folder work. Copy the folder into your agent's skills directory. It names tools by their bare name and does not depend on any one client.
 3. **[llms.txt](llms.txt).** An index of the files an agent should read when it works on this repo rather than through it.
+
+Each tool also says whether it writes (`readOnlyHint`), and [docs/TOOLS.md](docs/TOOLS.md) marks every entry *Read-only.* or *Writes.*
 
 ## What Fastmail does not allow
 

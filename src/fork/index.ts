@@ -1,7 +1,8 @@
 // Registry for fork-only tools. index.ts calls three functions from here and
 // nothing else, so upstream merges stay a merge.
-import { ErrorCode, McpError } from '@modelcontextprotocol/sdk/types.js';
+import { ProtocolErrorCode as ErrorCode, ProtocolError as McpError } from '@modelcontextprotocol/server';
 import type { JmapClient } from '../jmap-client.js';
+import { redactBearerTokens } from '../coerce.js';
 import { ForkTool, JmapError, RefusedError, ToolDef, isReadOnly, text } from './core.js';
 import { tools as mailboxes } from './mailboxes.js';
 import { tools as emails } from './emails.js';
@@ -33,10 +34,19 @@ const UPSTREAM_WRITE = new Set([
   'test_bulk_operations',
 ]);
 
-/** Fork definitions first; an upstream tool with the same name is replaced. */
+/**
+ * Fork definitions first; an upstream tool with the same name is replaced.
+ * Each tool gets readOnlyHint from the same flag FASTMAIL_READ_ONLY uses, so
+ * hosts can tell reads from writes. A definition with its own annotations
+ * (the official passthrough) keeps them.
+ */
 export async function mergeForkTools(upstream: ToolDef[]): Promise<ToolDef[]> {
   const all = await allTools();
-  return [...all.map((t) => t.def), ...upstream.filter((t) => !byName.has(t.name))];
+  const hint = (def: ToolDef, write: boolean): ToolDef => (def.annotations ? def : { ...def, annotations: { readOnlyHint: !write } });
+  return [
+    ...all.map((t) => hint(t.def, t.write)),
+    ...upstream.filter((t) => !byName.has(t.name)).map((t) => hint(t, UPSTREAM_WRITE.has(t.name))),
+  ];
 }
 
 /** Run a fork tool. Returns undefined when `name` is not ours. */
@@ -76,6 +86,22 @@ export function toMcpError(e: unknown): McpError {
     return new McpError(ErrorCode.InvalidRequest, e.message, e.detail as any);
   }
   return new McpError(ErrorCode.InternalError, `Tool execution failed: ${e instanceof Error ? e.message : String(e)}`);
+}
+
+/**
+ * The one exit for every tool error, upstream and fork. The spec says bad input
+ * and failed calls are tool results with isError, so the model reads them and
+ * retries. Only an unknown tool is a protocol error, with -32602. Redacted here
+ * so no path can leak a token.
+ */
+export function toToolError(e: unknown) {
+  const mapped = toMcpError(e);
+  if (mapped.code === ErrorCode.MethodNotFound) {
+    throw new McpError(ErrorCode.InvalidParams, redactBearerTokens(mapped.message));
+  }
+  const data = mapped.data && typeof mapped.data === 'object' ? mapped.data : {};
+  // Redact before JSON: the Bearer pattern would eat the closing quote.
+  return { ...text({ error: redactBearerTokens(mapped.message), ...data }), isError: true };
 }
 
 /**

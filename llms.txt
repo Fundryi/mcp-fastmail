@@ -24,4 +24,7 @@ Two ways an agent meets this project: through the tools (the server sends instru
 - Every user folder sits under Inbox. Paths without the Inbox prefix are accepted.
 - A plain API token has mail, submission, contacts and masked email. No sieve, quota or vacation responder; those tools refuse and name the capability.
 - Mailbox writes accept name, parentId, isSubscribed and sortOrder. Colour and the identity link are web-app only.
-- Errors come back as tool results with isError and a JSON body: the JMAP error type, or needsConfirm, or readOnly.
+- Errors come back as tool results with isError and a JSON body: the JMAP error type, needsConfirm, count and threshold, readOnly, or capability. Only an unknown tool name is a protocol error (-32602).
+- Every tool carries readOnlyHint. docs/TOOLS.md marks each one Read-only or Writes.
+- First calls: list_mailboxes with properties ["id","name","parentId","role","totalEmails","unreadEmails"], then check_function_availability for contacts, calendars and files.
+- Protocol: MCP 2026-07-28 (stateless) and the older revisions 2024-10-07 to 2025-11-25, all over stdio. MCP TypeScript SDK v2.

@@ -1,12 +1,12 @@
 #!/usr/bin/env node
-import { Server } from '@modelcontextprotocol/sdk/server/index.js';
-import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+// SDK v2. The aliases keep upstream's v1 names so the body below merges cleanly.
 import {
-  CallToolRequestSchema,
-  ErrorCode,
-  ListToolsRequestSchema,
-  McpError,
-} from '@modelcontextprotocol/sdk/types.js';
+  Server,
+  ProtocolErrorCode as ErrorCode,
+  ProtocolError as McpError,
+  type CallToolRequest,
+} from '@modelcontextprotocol/server';
+import { serveStdio } from '@modelcontextprotocol/server/stdio';
 import { FastmailAuth, FastmailConfig } from './auth.js';
 import { JmapClient, QueryResult } from './jmap-client.js';
 import { ContactsCalendarClient } from './contacts-calendar.js';
@@ -14,21 +14,28 @@ import { CalDAVCalendarClient } from './caldav-client.js';
 import { WebDAVFilesClient, filesAvailabilitySection } from './webdav-files-client.js';
 import { validateHttpsUrl } from './url-validation.js';
 import { coerceRecipients, coerceStringArray, coerceBool, redactBearerTokens, registerSecret } from './coerce.js';
-import { mergeForkTools, runForkTool, guardReadOnly, toMcpError } from './fork/index.js';
+import { mergeForkTools, runForkTool, guardReadOnly, toToolError } from './fork/index.js';
 import { INSTRUCTIONS } from './fork/instructions.js';
 
-const server = new Server(
-  {
-    name: 'fastmail-mcp',
-    version: '1.13.4',
-  },
-  {
-    capabilities: {
-      tools: {},
+// serveStdio may build more than one instance per process (a discarded probe,
+// then the real one), so the server is made by a factory, not once.
+function buildServer(): Server {
+  const server = new Server(
+    {
+      name: 'fastmail-mcp',
+      version: '1.13.4',
     },
-    instructions: INSTRUCTIONS,
-  }
-);
+    {
+      capabilities: {
+        tools: {},
+      },
+      instructions: INSTRUCTIONS,
+    }
+  );
+  server.setRequestHandler('tools/list', listToolsHandler);
+  server.setRequestHandler('tools/call', callToolHandler);
+  return server;
+}
 
 let jmapClient: JmapClient | null = null;
 let contactsCalendarClient: ContactsCalendarClient | null = null;
@@ -197,7 +204,7 @@ function formatQueryResult(result: QueryResult): string {
   return JSON.stringify(items, null, 2);
 }
 
-server.setRequestHandler(ListToolsRequestSchema, async () => {
+const listToolsHandler = async () => {
   return {
     tools: await mergeForkTools([
       {
@@ -1570,9 +1577,9 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
       },
     ]),
   };
-});
+};
 
-server.setRequestHandler(CallToolRequestSchema, async (request) => {
+const callToolHandler = async (request: CallToolRequest) => {
   const { name, arguments: args } = request.params;
 
   try {
@@ -2776,27 +2783,14 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         throw new McpError(ErrorCode.MethodNotFound, `Unknown tool: ${name}`);
     }
   } catch (error) {
-    if (error instanceof McpError) {
-      // Redact defensively even on the McpError path — in-file McpErrors are
-      // static today, but this makes redaction a single choke point so a future
-      // McpError built from dynamic content can't slip a secret through.
-      const safe = redactBearerTokens(error.message);
-      if (safe === error.message) throw error;
-      throw new McpError((error as any).code ?? ErrorCode.InternalError, safe);
-    }
-    const mapped = toMcpError(error);
-    throw new McpError((mapped as any).code ?? ErrorCode.InternalError, redactBearerTokens(mapped.message), (mapped as any).data);
+    // Single redacting exit: isError result, or -32602 for an unknown tool.
+    return toToolError(error);
   }
-});
+};
 
-async function runServer() {
-  const transport = new StdioServerTransport();
-  await server.connect(transport);
-  console.error('Fastmail MCP server running on stdio');
-}
-
-runServer().catch(() => {
+// Serves both the 2026-07-28 stateless protocol and 2025-era clients.
+serveStdio(buildServer, {
   // Avoid logging raw error objects to prevent accidental PII leakage
-  console.error('Fastmail MCP server failed to start');
-  process.exit(1);
+  onerror: () => console.error('Fastmail MCP server: transport error'),
 });
+console.error('Fastmail MCP server running on stdio');

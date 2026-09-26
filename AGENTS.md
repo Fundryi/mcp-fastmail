@@ -98,6 +98,30 @@ elevated shell. They pass on Linux and in CI. Everything else must be green.
 TypeScript, npm, Node 20+. `npm ci`, `npm run build`, `npm test`,
 `npm run scan:secrets`. Match upstream's conventions in files we add.
 
+## MCP protocol and SDK
+
+The server speaks MCP 2026-07-28 (stateless, no `initialize`) and the older
+revisions 2024-10-07 to 2025-11-25, on one stdio command. That needs SDK v2.
+
+- Use `@modelcontextprotocol/server` and `@modelcontextprotocol/client`. Never
+  add `@modelcontextprotocol/sdk`; v1 cannot speak 2026-07-28. Upstream may
+  still be on v1, so port its imports on merge.
+- `src/index.ts` imports `ProtocolError` and `ProtocolErrorCode` as `McpError`
+  and `ErrorCode`. The aliases keep upstream's body unchanged, so merges stay
+  small.
+- `serveStdio(buildServer)` may build more than one server per process (a
+  probe it throws away, then the real one). Keep state at module level, never
+  on the server object.
+- Every tool error leaves through `toToolError` in `src/fork/index.ts`: an
+  `isError` result with a JSON body, redacted. Only an unknown tool name is a
+  protocol error (-32602). A tool throws; it does not build its own error
+  result.
+- A fork tool's `write` flag drives `FASTMAIL_READ_ONLY` and the
+  `readOnlyHint` annotation. An upstream write tool goes in `UPSTREAM_WRITE`.
+  A wrong flag tells hosts a write is safe.
+- `npm run docs:tools` connects with `versionNegotiation: 'auto'`, so a docs
+  run is also a live check of the 2026-07-28 path.
+
 ## GitHub Actions in this fork
 
 Upstream ships release automation. In our repo it cut a `v1.13.4` tag and a

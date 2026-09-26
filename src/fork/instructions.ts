@@ -3,6 +3,11 @@
 // skill file outside this repo.
 export const INSTRUCTIONS = `Fastmail over JMAP. Folders are labels: one email can sit in several mailboxes, and every user folder lives under Inbox.
 
+FIRST CALLS IN A SESSION
+- list_mailboxes with properties ["id","name","parentId","role","totalEmails","unreadEmails"]: the whole folder tree in one call. Work by id after that.
+- check_function_availability: which of contacts, calendars (CalDAV) and files (WebDAV) are set up. get_session: what the API token can reach.
+- Every tool carries readOnlyHint. Read-only tools are safe to call freely; the rest change the account.
+
 PICK THE TOOL BY TASK, NOT BY KEYWORD
 - Counts per sender, recipient or subject: summarize_mailbox. Never page list results to count.
 - Unread across a folder tree: list_unread_across.
@@ -43,4 +48,4 @@ NOT AVAILABLE ON AN API TOKEN
 - Sieve rules, quota, vacation responder: the tools exist and refuse with the missing capability named. Folder colour and DKIM/MX status: not reachable over JMAP at all.
 
 ERRORS
-- MCP error data carries { jmap: { type, description } } for server errors and { needsConfirm } or { readOnly } for refusals. Read data.jmap.type before retrying.`;
+- A failed call is a tool result with isError: true and a JSON body: { error } plus { jmap: { type, description } } for a server error, or for a refusal { count, threshold } (bulk above the confirm threshold), { needsConfirm } (permanent destroy or overwrite), { readOnly } or { capability } (token lacks the scope; do not retry). Read jmap.type before retrying; fix the argument the error names. Only an unknown tool name is a protocol error (-32602).`;
