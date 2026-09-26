@@ -283,6 +283,10 @@ export class JmapClient {
     const args: Record<string, any> = { accountId: session.accountId };
     if (options?.properties && options.properties.length > 0) {
       args.properties = options.properties;
+      // The parentId filter below reads parentId; without it every mailbox looks top-level.
+      if (Object.prototype.hasOwnProperty.call(options, 'parentId') && !args.properties.includes('parentId')) {
+        args.properties = [...args.properties, 'parentId'];
+      }
     }
 
     const request: JmapRequest = {
