@@ -1,5 +1,13 @@
 # AGENTS.md
 
+## Local checkout for development and validation
+
+Always develop and validate this MCP server against the local checkout, using its configured local MCP entry. Rebuild when needed and reconnect after code changes.
+
+If that local server fails or is unavailable, report the local error. You may use its deployed MCP Hub counterpart for read-only information or debugging. Clearly state that Hub was used, why, and which findings came from it. Hub results do not validate the local build: keep the local failure unresolved until it is fixed and retested locally, or explicitly handed back as blocked. Never report local success based on Hub results.
+
+This exception permits no Hub writes and does not bypass existing account, sandbox, permission or deliberate-disable restrictions. Other Hub services remain available under their normal rules.
+
 Rules for working in this repo. Private notes with local paths and account
 details live in CLAUDE.local.md, which is gitignored.
 
