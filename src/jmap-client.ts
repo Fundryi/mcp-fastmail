@@ -139,15 +139,36 @@ export interface QueryResult<T = any> {
 
 /**
  * Tool-facing attachment source. Exactly one of localPath, emailId(+attachmentId),
- * or blobId must be set; name/type optionally override the inferred values.
+ * blobId or content must be set; name/type optionally override the inferred values.
+ * content is standard base64 of the file, for callers whose files are not on this
+ * server's disk (a remote or proxied server); it requires name.
  */
 export interface AttachmentInput {
   localPath?: string;
   emailId?: string;
   attachmentId?: string;
   blobId?: string;
+  content?: string;
   name?: string;
   type?: string;
+}
+
+/**
+ * Strictly decode standard base64. Node's decoder silently skips invalid
+ * characters, which would upload a corrupted file without an error.
+ * Whitespace (line-wrapped base64) is ignored; anything else must be valid.
+ */
+export function decodeStrictBase64(input: string, maxBytes?: number): Buffer {
+  const s = input.replace(/\s+/g, '');
+  if (s.length % 4 !== 0 || !/^[A-Za-z0-9+/]*={0,2}$/.test(s)) {
+    throw new Error('Attachment content is not valid standard base64 (use + and /, not - and _)');
+  }
+  const padding = s.endsWith('==') ? 2 : s.endsWith('=') ? 1 : 0;
+  const size = (s.length / 4) * 3 - padding;
+  if (typeof maxBytes === 'number' && size > maxBytes) {
+    throw new Error(`Attachment is ${size} bytes; the server's upload limit is ${maxBytes} bytes`);
+  }
+  return Buffer.from(s, 'base64');
 }
 
 export class JmapClient {
@@ -1726,15 +1747,32 @@ export class JmapClient {
    *  - { localPath }             file confined to the download directory
    *  - { emailId, attachmentId } zero-copy reuse of an existing attachment's blob
    *  - { blobId, name, type }    a blob already uploaded to this account
+   *  - { content, name, type }   standard base64 bytes, uploaded as a new blob
    */
   async resolveAttachments(inputs: AttachmentInput[], downloadDir?: string): Promise<any[]> {
     const parts: any[] = [];
     for (const input of inputs) {
-      const sources = [input.localPath, input.emailId, input.blobId].filter((v) => v != null).length;
+      const sources = [input.localPath, input.emailId, input.blobId, input.content].filter((v) => v != null).length;
       if (sources !== 1) {
-        throw new Error('Each attachment must specify exactly one source: localPath, emailId+attachmentId, or blobId');
+        throw new Error('Each attachment must specify exactly one source: localPath, emailId+attachmentId, blobId, or content');
       }
-      if (input.blobId) {
+      if (input.content != null) {
+        if (!input.name) {
+          throw new Error('An attachment sent as content needs a name');
+        }
+        const session = await this.getSession();
+        const maxSize = session.capabilities?.['urn:ietf:params:jmap:core']?.maxSizeUpload;
+        const buffer = decodeStrictBase64(input.content, typeof maxSize === 'number' ? maxSize : undefined);
+        const ext = input.name.split('.').pop()?.toLowerCase() ?? '';
+        const type = input.type || JmapClient.MIME_BY_EXT[ext] || 'application/octet-stream';
+        const uploaded = await this.uploadBlob(buffer, type);
+        parts.push({
+          blobId: uploaded.blobId,
+          type,
+          name: input.name,
+          disposition: 'attachment',
+        });
+      } else if (input.blobId) {
         parts.push({
           blobId: input.blobId,
           type: input.type || 'application/octet-stream',

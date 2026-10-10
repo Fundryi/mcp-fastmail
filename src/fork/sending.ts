@@ -129,7 +129,7 @@ async function draftsId(client: JmapClient): Promise<string> {
 
 const attachmentsSchema = {
   type: 'array',
-  description: 'Files to attach. Each entry uses EXACTLY ONE source: localPath (inside FASTMAIL_DOWNLOAD_DIR), emailId + attachmentId (re-use an existing attachment, no bytes copied), or blobId. Optional name/type override.',
+  description: 'Files to attach. Each entry uses EXACTLY ONE source: localPath (inside FASTMAIL_DOWNLOAD_DIR), emailId + attachmentId (re-use an existing attachment, no bytes copied), blobId, or content (standard base64, with name; only when the file is not on this server\'s disk). Optional name/type override.',
   items: {
     type: 'object',
     properties: {
@@ -137,6 +137,7 @@ const attachmentsSchema = {
       emailId: { type: 'string' },
       attachmentId: { type: 'string', description: 'partId, blobId or zero-based index within the source email' },
       blobId: { type: 'string' },
+      content: { type: 'string', description: 'Standard base64 of the file. Only when the file is not on this server\'s disk; prefer localPath. Requires name.' },
       name: { type: 'string' },
       type: { type: 'string' },
     },

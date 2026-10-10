@@ -6,7 +6,7 @@ import {
   ProtocolError as McpError,
   type CallToolRequest,
 } from '@modelcontextprotocol/server';
-import { serveStdio } from '@modelcontextprotocol/server/stdio';
+import { serveStdio, StdioServerTransport } from '@modelcontextprotocol/server/stdio';
 import { FastmailAuth, FastmailConfig } from './auth.js';
 import { JmapClient, QueryResult } from './jmap-client.js';
 import { ContactsCalendarClient } from './contacts-calendar.js';
@@ -16,6 +16,8 @@ import { validateHttpsUrl } from './url-validation.js';
 import { coerceRecipients, coerceStringArray, coerceBool, redactBearerTokens, registerSecret } from './coerce.js';
 import { mergeForkTools, runForkTool, guardReadOnly, toToolError } from './fork/index.js';
 import { INSTRUCTIONS } from './fork/instructions.js';
+
+const STDIO_MAX_BUFFER_BYTES = 256 * 1024 * 1024;
 
 // serveStdio may build more than one instance per process (a discarded probe,
 // then the real one), so the server is made by a factory, not once.
@@ -401,7 +403,7 @@ const listToolsHandler = async () => {
             },
             attachments: {
               type: 'array',
-              description: 'Files to attach. Each entry must use EXACTLY ONE source: localPath (a file inside the configured download directory), emailId + attachmentId (re-attach an attachment from an existing email — no bytes are copied), or blobId (an already-uploaded JMAP blob). Optional name/type override the inferred filename and MIME type.',
+              description: 'Files to attach. Each entry must use EXACTLY ONE source: localPath (a file inside the configured download directory), emailId + attachmentId (re-attach an attachment from an existing email — no bytes are copied), blobId (an already-uploaded JMAP blob), or content (standard base64 of the file, with name; only when the file is not on the disk of this server). Optional name/type override the inferred filename and MIME type.',
               items: {
                 type: 'object',
                 properties: {
@@ -409,6 +411,7 @@ const listToolsHandler = async () => {
                   emailId: { type: 'string', description: 'Source email ID (use with attachmentId)' },
                   attachmentId: { type: 'string', description: 'Attachment partId, blobId, or zero-based index within the source email' },
                   blobId: { type: 'string', description: 'An existing blob ID in this account' },
+                  content: { type: 'string', description: 'Standard base64 of the file. Only when the file is not on the disk of this server; prefer localPath. Requires name.' },
                   name: { type: 'string', description: 'Override the attachment filename' },
                   type: { type: 'string', description: 'Override the MIME type' },
                 },
@@ -466,7 +469,7 @@ const listToolsHandler = async () => {
             },
             attachments: {
               type: 'array',
-              description: 'Files to attach. Each entry must use EXACTLY ONE source: localPath (a file inside the configured download directory), emailId + attachmentId (re-attach an attachment from an existing email — no bytes are copied), or blobId (an already-uploaded JMAP blob). Optional name/type override the inferred filename and MIME type.',
+              description: 'Files to attach. Each entry must use EXACTLY ONE source: localPath (a file inside the configured download directory), emailId + attachmentId (re-attach an attachment from an existing email — no bytes are copied), blobId (an already-uploaded JMAP blob), or content (standard base64 of the file, with name; only when the file is not on the disk of this server). Optional name/type override the inferred filename and MIME type.',
               items: {
                 type: 'object',
                 properties: {
@@ -474,6 +477,7 @@ const listToolsHandler = async () => {
                   emailId: { type: 'string', description: 'Source email ID (use with attachmentId)' },
                   attachmentId: { type: 'string', description: 'Attachment partId, blobId, or zero-based index within the source email' },
                   blobId: { type: 'string', description: 'An existing blob ID in this account' },
+                  content: { type: 'string', description: 'Standard base64 of the file. Only when the file is not on the disk of this server; prefer localPath. Requires name.' },
                   name: { type: 'string', description: 'Override the attachment filename' },
                   type: { type: 'string', description: 'Override the MIME type' },
                 },
@@ -541,7 +545,7 @@ const listToolsHandler = async () => {
             },
             attachments: {
               type: 'array',
-              description: 'Files to attach. Each entry must use EXACTLY ONE source: localPath (a file inside the configured download directory), emailId + attachmentId (re-attach an attachment from an existing email — no bytes are copied), or blobId (an already-uploaded JMAP blob). Optional name/type override the inferred filename and MIME type.',
+              description: 'Files to attach. Each entry must use EXACTLY ONE source: localPath (a file inside the configured download directory), emailId + attachmentId (re-attach an attachment from an existing email — no bytes are copied), blobId (an already-uploaded JMAP blob), or content (standard base64 of the file, with name; only when the file is not on the disk of this server). Optional name/type override the inferred filename and MIME type.',
               items: {
                 type: 'object',
                 properties: {
@@ -549,6 +553,7 @@ const listToolsHandler = async () => {
                   emailId: { type: 'string', description: 'Source email ID (use with attachmentId)' },
                   attachmentId: { type: 'string', description: 'Attachment partId, blobId, or zero-based index within the source email' },
                   blobId: { type: 'string', description: 'An existing blob ID in this account' },
+                  content: { type: 'string', description: 'Standard base64 of the file. Only when the file is not on the disk of this server; prefer localPath. Requires name.' },
                   name: { type: 'string', description: 'Override the attachment filename' },
                   type: { type: 'string', description: 'Override the MIME type' },
                 },
@@ -605,7 +610,7 @@ const listToolsHandler = async () => {
             },
             attachments: {
               type: 'array',
-              description: 'Files to attach. Each entry must use EXACTLY ONE source: localPath (a file inside the configured download directory), emailId + attachmentId (re-attach an attachment from an existing email — no bytes are copied), or blobId (an already-uploaded JMAP blob). Optional name/type override the inferred filename and MIME type.',
+              description: 'Files to attach. Each entry must use EXACTLY ONE source: localPath (a file inside the configured download directory), emailId + attachmentId (re-attach an attachment from an existing email — no bytes are copied), blobId (an already-uploaded JMAP blob), or content (standard base64 of the file, with name; only when the file is not on the disk of this server). Optional name/type override the inferred filename and MIME type.',
               items: {
                 type: 'object',
                 properties: {
@@ -613,6 +618,7 @@ const listToolsHandler = async () => {
                   emailId: { type: 'string', description: 'Source email ID (use with attachmentId)' },
                   attachmentId: { type: 'string', description: 'Attachment partId, blobId, or zero-based index within the source email' },
                   blobId: { type: 'string', description: 'An existing blob ID in this account' },
+                  content: { type: 'string', description: 'Standard base64 of the file. Only when the file is not on the disk of this server; prefer localPath. Requires name.' },
                   name: { type: 'string', description: 'Override the attachment filename' },
                   type: { type: 'string', description: 'Override the MIME type' },
                 },
@@ -1195,7 +1201,7 @@ const listToolsHandler = async () => {
       },
       {
         name: 'download_attachment',
-        description: 'Download an email attachment. If savePath is provided, saves the file to disk and returns the file path and size. Otherwise returns a download URL.',
+        description: 'Download an email attachment. If savePath is provided, saves the file to disk and returns the file path and size. With base64: true, returns {name, type, size, base64} instead (only when this server\'s disk is not reachable by the caller; prefer savePath). Otherwise returns a download URL.',
         inputSchema: {
           type: 'object',
           properties: {
@@ -1210,6 +1216,10 @@ const listToolsHandler = async () => {
             savePath: {
               type: 'string',
               description: `File path to save the attachment to. May be absolute or relative; relative paths resolve against ${getDownloadDir() || '~/Downloads/fastmail-mcp/'} (configurable via FASTMAIL_DOWNLOAD_DIR), so a bare filename lands there in one step. Absolute paths must fall within that directory; traversal or symlink escape outside it is rejected for security. To save directly into your own location, set FASTMAIL_DOWNLOAD_DIR to that root. Parent directories will be created automatically.`,
+            },
+            base64: {
+              type: 'boolean',
+              description: 'Return the file as standard base64 in the result instead of a URL. Only for callers that cannot reach this server\'s disk. Cannot be combined with savePath.',
             },
           },
           required: ['emailId', 'attachmentId'],
@@ -2315,12 +2325,26 @@ const callToolHandler = async (request: CallToolRequest) => {
 
       case 'download_attachment': {
         const { emailId, attachmentId, savePath } = args as any;
+        const asBase64 = coerceBool((args as any).base64) === true;
         if (!emailId || !attachmentId) {
           throw new McpError(ErrorCode.InvalidParams, 'emailId and attachmentId are required');
         }
+        if (asBase64 && savePath) {
+          throw new McpError(ErrorCode.InvalidParams, 'Use either savePath or base64, not both');
+        }
         const client = initializeClient();
         try {
-          if (savePath) {
+          if (asBase64) {
+            const { buffer, name, type } = await client.fetchAttachmentBuffer(emailId, attachmentId);
+            return {
+              content: [
+                {
+                  type: 'text',
+                  text: JSON.stringify({ name, type, size: buffer.length, base64: buffer.toString('base64') }),
+                },
+              ],
+            };
+          } else if (savePath) {
             const result = await client.downloadAttachmentToFile(emailId, attachmentId, savePath, getDownloadDir());
             return {
               content: [
@@ -2789,7 +2813,11 @@ const callToolHandler = async (request: CallToolRequest) => {
 };
 
 // Serves both the 2026-07-28 stateless protocol and 2025-era clients.
+// The SDK's default 10 MiB read buffer drops any larger request without an
+// answer; an attachment sent as base64 content (up to Fastmail's 50 MB per
+// email) needs room for 4/3 of its size plus JSON.
 serveStdio(buildServer, {
+  transport: new StdioServerTransport(undefined, undefined, { maxBufferSize: STDIO_MAX_BUFFER_BYTES }),
   // Avoid logging raw error objects to prevent accidental PII leakage
   onerror: () => console.error('Fastmail MCP server: transport error'),
 });

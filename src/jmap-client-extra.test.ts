@@ -1,6 +1,6 @@
 import { describe, it, beforeEach, mock } from 'node:test';
 import assert from 'node:assert/strict';
-import { JmapClient, buildEmailQueryFilter } from './jmap-client.js';
+import { JmapClient, buildEmailQueryFilter, decodeStrictBase64 } from './jmap-client.js';
 import { ContactsCalendarClient } from './contacts-calendar.js';
 import { FastmailAuth } from './auth.js';
 
@@ -1277,11 +1277,56 @@ describe('attachments on send', () => {
 
   it('resolveAttachments rejects entries with zero or multiple sources', async () => {
     const client = makeUploadClient();
-    await assert.rejects(() => client.resolveAttachments([{ name: 'x.txt' }]), /exactly one source/);
+    await assert.rejects(() => client.resolveAttachments([{ name: 'x.txt' }]), /exactly one source: localPath, emailId\+attachmentId, blobId, or content/);
     await assert.rejects(
       () => client.resolveAttachments([{ blobId: 'B', localPath: 'a.txt' }]),
       /exactly one source/,
     );
+  });
+
+  it('resolveAttachments uploads base64 content as a new blob with the given name', async () => {
+    const client = makeUploadClient();
+    const fetchMock = mock.method(globalThis, 'fetch', async () => new Response(
+      JSON.stringify({ blobId: 'B-content', type: 'application/pdf', size: 5 }), { status: 200 },
+    ));
+    try {
+      const parts = await client.resolveAttachments([
+        { content: Buffer.from('hello').toString('base64'), name: 'report.pdf' },
+      ]);
+      assert.deepEqual(parts, [{ blobId: 'B-content', type: 'application/pdf', name: 'report.pdf', disposition: 'attachment' }]);
+      const [, opts] = fetchMock.mock.calls[0].arguments;
+      assert.deepEqual(Buffer.from(opts.body), Buffer.from('hello'));
+      assert.equal(opts.headers['Content-Type'], 'application/pdf');
+    } finally { fetchMock.mock.restore(); }
+  });
+
+  it('resolveAttachments refuses content without a name, bad base64, or above maxSizeUpload, before any upload', async () => {
+    const client = makeUploadClient();
+    const fetchMock = mock.method(globalThis, 'fetch', async () => { throw new Error('should not fetch'); });
+    try {
+      await assert.rejects(() => client.resolveAttachments([{ content: 'aGVsbG8=' }]), /needs a name/);
+      await assert.rejects(
+        () => client.resolveAttachments([{ content: 'aGV-bG8_', name: 'a.bin' }]),
+        /not valid standard base64/,
+      );
+      await assert.rejects(
+        () => client.resolveAttachments([{ content: Buffer.alloc(2048).toString('base64'), name: 'a.bin' }]),
+        /upload limit is 1024 bytes/,
+      );
+      await assert.rejects(
+        () => client.resolveAttachments([{ content: 'aGVsbG8=', localPath: 'a.txt', name: 'a.txt' }]),
+        /exactly one source/,
+      );
+      assert.equal(fetchMock.mock.calls.length, 0);
+    } finally { fetchMock.mock.restore(); }
+  });
+
+  it('decodeStrictBase64 accepts wrapped base64 and rejects anything Node would silently skip', () => {
+    assert.equal(decodeStrictBase64('aGVs\nbG8=').toString(), 'hello');
+    assert.equal(decodeStrictBase64('').length, 0);
+    assert.throws(() => decodeStrictBase64('aGVsbG8'), /not valid/);
+    assert.throws(() => decodeStrictBase64('aGVs*G8='), /not valid/);
+    assert.throws(() => decodeStrictBase64('aGVsbG8=', 4), /5 bytes; the server's upload limit is 4 bytes/);
   });
 
   it('sendEmail places attachments as the RFC 8621 convenience property, never bodyStructure', async () => {

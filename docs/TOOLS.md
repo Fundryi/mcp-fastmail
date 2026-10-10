@@ -591,7 +591,7 @@ A fork tool with the same name as an upstream tool replaces it and keeps every u
   - `inReplyTo` (array) Message-IDs to reply to (optional, for threading)
   - `references` (array) Message-IDs for References header (optional, for threading)
   - `replyTo` (array) Reply-To email addresses (replies go here instead of to the sender)
-  - `attachments` (array) Files to attach. Each entry must use EXACTLY ONE source: localPath (a file inside the configured download directory), emailId + attachmentId (re-attach an attachment from an existing email — no bytes are copied), or blobId (an already-uploaded JMAP blob). Optional name/type override the inferred filename and MIME type.
+  - `attachments` (array) Files to attach. Each entry must use EXACTLY ONE source: localPath (a file inside the configured download directory), emailId + attachmentId (re-attach an attachment from an existing email — no bytes are copied), blobId (an already-uploaded JMAP blob), or content (standard base64 of the file, with name; only when the file is not on the disk of this server). Optional name/type override the inferred filename and MIME type.
 
 ### `create_identity`
 
@@ -636,7 +636,7 @@ A fork tool with the same name as an upstream tool replaces it and keeps every u
   - `textBody` (string) Updated plain text body (optional)
   - `htmlBody` (string) Updated HTML body (optional)
   - `replyTo` (array) Reply-To email addresses (replies go here instead of to the sender)
-  - `attachments` (array) Files to attach. Each entry must use EXACTLY ONE source: localPath (a file inside the configured download directory), emailId + attachmentId (re-attach an attachment from an existing email — no bytes are copied), or blobId (an already-uploaded JMAP blob). Optional name/type override the inferred filename and MIME type.
+  - `attachments` (array) Files to attach. Each entry must use EXACTLY ONE source: localPath (a file inside the configured download directory), emailId + attachmentId (re-attach an attachment from an existing email — no bytes are copied), blobId (an already-uploaded JMAP blob), or content (standard base64 of the file, with name; only when the file is not on the disk of this server). Optional name/type override the inferred filename and MIME type.
 
 ### `merge_mailbox`
 
@@ -784,7 +784,7 @@ A fork tool with the same name as an upstream tool replaces it and keeps every u
   - `textBody` (string)
   - `htmlBody` (string)
   - `send` (boolean | string) Send now (default true); false saves a draft.
-  - `attachments` (array) Files to attach. Each entry uses EXACTLY ONE source: localPath (inside FASTMAIL_DOWNLOAD_DIR), emailId + attachmentId (re-use an existing attachment, no bytes copied), or blobId. Optional name/type override.
+  - `attachments` (array) Files to attach. Each entry uses EXACTLY ONE source: localPath (inside FASTMAIL_DOWNLOAD_DIR), emailId + attachmentId (re-use an existing attachment, no bytes copied), blobId, or content (standard base64, with name; only when the file is not on this server's disk). Optional name/type override.
   - `identityId` (string) Sending identity id (see list_identities). Wins over fromEmail.
   - `fromEmail` (string) Send as this verified identity address. Refused if no identity matches; the error lists the available ones.
   - `from` (string) Alias of fromEmail (upstream name).
@@ -810,7 +810,7 @@ A fork tool with the same name as an upstream tool replaces it and keeps every u
   - `mailboxId` (string) Mailbox to create the draft in before sending (default Drafts).
   - `inReplyTo` (array)
   - `references` (array)
-  - `attachments` (array) Files to attach. Each entry uses EXACTLY ONE source: localPath (inside FASTMAIL_DOWNLOAD_DIR), emailId + attachmentId (re-use an existing attachment, no bytes copied), or blobId. Optional name/type override.
+  - `attachments` (array) Files to attach. Each entry uses EXACTLY ONE source: localPath (inside FASTMAIL_DOWNLOAD_DIR), emailId + attachmentId (re-use an existing attachment, no bytes copied), blobId, or content (standard base64, with name; only when the file is not on this server's disk). Optional name/type override.
   - `identityId` (string) Sending identity id (see list_identities). Wins over fromEmail.
   - `fromEmail` (string) Send as this verified identity address. Refused if no identity matches; the error lists the available ones.
   - `from` (string) Alias of fromEmail (upstream name).
@@ -834,11 +834,12 @@ A fork tool with the same name as an upstream tool replaces it and keeps every u
 
 ### `download_attachment`
 
-*Writes.* Download an email attachment. If savePath is provided, saves the file to disk and returns the file path and size. Otherwise returns a download URL.
+*Writes.* Download an email attachment. If savePath is provided, saves the file to disk and returns the file path and size. With base64: true, returns {name, type, size, base64} instead (only when this server's disk is not reachable by the caller; prefer savePath). Otherwise returns a download URL.
 
   - `emailId` (string, required) ID of the email
   - `attachmentId` (string, required) ID of the attachment
   - `savePath` (string) File path to save the attachment to. May be absolute or relative; relative paths resolve against ~/Downloads/fastmail-mcp/ (configurable via FASTMAIL_DOWNLOAD_DIR), so a bare filename lands there in one step. Absolute paths must fall within that directory; traversal or symlink escape outside it is rejected for security. To save directly into your own location, set FASTMAIL_DOWNLOAD_DIR to that root. Parent directories will be created automatically.
+  - `base64` (boolean) Return the file as standard base64 in the result instead of a URL. Only for callers that cannot reach this server's disk. Cannot be combined with savePath.
 
 ### `save_attachment_to_webdav`
 
