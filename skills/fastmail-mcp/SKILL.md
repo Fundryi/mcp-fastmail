@@ -186,6 +186,7 @@ Check the bare name against your tool list.
 | Notes, email memos, company directory, RSVP | Not in JMAP token scopes | `official_*` tools with a second token of type MCP |
 | Push on new mail | MCP has no long-running process | A cron job calling `get_changes`, outside the MCP |
 | PDF text | No parser in the server | `download_attachment`, then read the file |
+| Attach a file from your machine when the server runs elsewhere (MCPHub) | Your path does not exist on the server | `content` (base64 + `name`); large files via the helper in [docs/REMOTE-FILES.md](../../docs/REMOTE-FILES.md) |
 
 ## After a rebuild
 

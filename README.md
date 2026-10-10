@@ -83,6 +83,10 @@ The server speaks MCP 2026-07-28, the stateless revision, and every older revisi
 
 For Claude Desktop, `npx @anthropic-ai/dxt pack` after the build produces a `.dxt` file you can drag into the app. It asks for the token and the optional CalDAV and WebDAV settings.
 
+### Running it on another machine
+
+Installed locally, attachments take `localPath` and nothing else is needed. Behind MCPHub or any other remote host, the server cannot see the caller's disk, and MCP has no file upload yet. Attachments then take base64 `content`, `download_attachment` takes `base64: true`, and large files go through a one-file helper that keeps them out of the model's context. See [docs/REMOTE-FILES.md](docs/REMOTE-FILES.md). A `localPath` the server cannot find fails with a pointer to that guide.
+
 ## Configuration
 
 Every variable is documented in [.env.example](.env.example). The short version:

@@ -37,6 +37,10 @@ SENDING
 - send_email and reply_email choose the From identity by identityId or fromEmail. A reply defaults to the identity the original was addressed to, including *@domain catch-all identities. sendAt schedules; list_scheduled and cancel_send manage it.
 - snooze_email needs a mailbox with role "snoozed". Fastmail creates it the first time snooze is used in the web app.
 
+FILES
+- Attachment sources: localPath (a file on this server's disk, inside FASTMAIL_DOWNLOAD_DIR), emailId + attachmentId (re-use, no bytes move), blobId, or content (standard base64 + name).
+- Prefer localPath when this server runs on your machine. If it runs elsewhere (for example behind MCPHub), your paths do not exist here: use content, and download_attachment with base64: true. For large files keep the bytes out of your context with the helper in docs/REMOTE-FILES.md (https://github.com/Fundryi/mcp-fastmail/blob/main/docs/REMOTE-FILES.md).
+
 SEARCH SYNTAX
 - search_emails takes a Gmail-style string: from:, to:, cc:, subject:, body:, has:attachment, is:unread, is:flagged, in:<folder path or role>, -in:, after:, before:, newer_than:7d, larger:1M, header:Name=value, domain:. The answer includes "parsed", the filter the string became.
 

@@ -1,6 +1,9 @@
 import { describe, it, beforeEach, mock } from 'node:test';
 import assert from 'node:assert/strict';
-import { JmapClient, buildEmailQueryFilter, decodeStrictBase64 } from './jmap-client.js';
+import { mkdtemp, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { JmapClient, buildEmailQueryFilter, decodeStrictBase64, REMOTE_FILES_GUIDE_URL } from './jmap-client.js';
 import { ContactsCalendarClient } from './contacts-calendar.js';
 import { FastmailAuth } from './auth.js';
 
@@ -1319,6 +1322,18 @@ describe('attachments on send', () => {
       );
       assert.equal(fetchMock.mock.calls.length, 0);
     } finally { fetchMock.mock.restore(); }
+  });
+
+  it('a localPath the server cannot find points the caller to the remote files guide', async () => {
+    const client = makeUploadClient();
+    const dir = await mkdtemp(join(tmpdir(), 'fastmail-remote-'));
+    try {
+      await assert.rejects(
+        () => client.resolveAttachments([{ localPath: 'not-here.pdf' }], dir),
+        (err: any) => /not found/.test(err.message) && /MCPHub/.test(err.message)
+          && err.message.includes(REMOTE_FILES_GUIDE_URL),
+      );
+    } finally { await rm(dir, { recursive: true, force: true }); }
   });
 
   it('decodeStrictBase64 accepts wrapped base64 and rejects anything Node would silently skip', () => {

@@ -153,6 +153,9 @@ export interface AttachmentInput {
   type?: string;
 }
 
+/** How to send a file to this server when it runs on another machine. */
+export const REMOTE_FILES_GUIDE_URL = 'https://github.com/Fundryi/mcp-fastmail/blob/main/docs/REMOTE-FILES.md';
+
 /**
  * Strictly decode standard base64. Node's decoder silently skips invalid
  * characters, which would upload a corrupted file without an error.
@@ -1680,7 +1683,11 @@ export class JmapClient {
       canonicalAllowed = await realpath(allowedDir);
       canonicalFile = await realpath(lexical);
     } catch {
-      throw new Error(`Attachment file not found: ${readPath}`);
+      throw new Error(
+        `Attachment file not found: ${readPath}. Paths resolve on the MCP server's disk. ` +
+        'If this server runs on another machine (for example behind MCPHub), send the file ' +
+        `as base64 content (with name) instead; for large files see ${REMOTE_FILES_GUIDE_URL}`,
+      );
     }
     if (!canonicalFile.startsWith(canonicalAllowed + sep) && canonicalFile !== canonicalAllowed) {
       throw new Error(`Attachment path must resolve within ${allowedDir}. Received: ${readPath}`);

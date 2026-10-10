@@ -10,6 +10,7 @@ Two ways an agent meets this project: through the tools (the server sends instru
 - [Server instructions](src/fork/instructions.ts): the short form every MCP client receives on connect.
 - [Tool reference](docs/TOOLS.md): every tool with every parameter, generated from the server.
 - [Environment variables](.env.example): every setting, documented, no values.
+- [Remote files](docs/REMOTE-FILES.md): attachments when the server runs on another machine (MCPHub): base64 content, download base64, the helper script.
 
 ## Working on the code
 
